@@ -229,11 +229,28 @@ export default function Home() {
                         <div className="flex items-center justify-center h-full text-neutral-500">Sem Imagem</div>
                       )}
 
-                      {isClose && (
-                        <span className="absolute top-3 left-3 px-3 py-1 text-xs font-bold rounded-full bg-amber-500 text-black uppercase tracking-wider shadow-md animate-pulse">
-                          🔥 Acontece em Breve
-                        </span>
-                      )}
+                      {/* BADGES NO TOPO DA IMAGEM */}
+                      <div className="absolute top-3 left-3 flex flex-col gap-2 items-start">
+                        {isClose && (
+                          <span className="px-3 py-1 text-xs font-bold rounded-full bg-amber-500 text-black uppercase tracking-wider shadow-md animate-pulse">
+                            🔥 Acontece em Breve
+                          </span>
+                        )}
+
+                        {/* Indicador de Lote atual (se preenchido na base de dados) */}
+                        {event.batch_name && (
+                          <span className="px-3 py-1 text-xs font-bold rounded-full bg-blue-600 text-white uppercase tracking-wider shadow-md">
+                            🎫 {event.batch_name}
+                          </span>
+                        )}
+
+                        {/* Indicador de Esgotado (se marcado como esgotado) */}
+                        {event.is_sold_out && (
+                          <span className="px-3 py-1 text-xs font-bold rounded-full bg-red-600 text-white uppercase tracking-wider shadow-md">
+                            🔴 Esgotado
+                          </span>
+                        )}
+                      </div>
 
                       <span className={`absolute top-3 right-3 px-3 py-1 text-xs font-semibold rounded-full uppercase tracking-wider ${
                         event.event_type === 'esporte' 
@@ -255,12 +272,21 @@ export default function Home() {
                           <span>📅 {new Date(event.event_date).toLocaleDateString('pt-BR')}</span>
                         </div>
 
-                        <Link 
-                          href={`/eventos/${event.id}`}
-                          className="block w-full text-center py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold rounded-xl transition-colors"
-                        >
-                          Ver Detalhes e Ingressos
-                        </Link>
+                        {event.is_sold_out ? (
+                          <button 
+                            disabled
+                            className="block w-full text-center py-3 px-4 bg-neutral-800 text-neutral-500 font-semibold rounded-xl cursor-not-allowed"
+                          >
+                            Esgotado
+                          </button>
+                        ) : (
+                          <Link 
+                            href={`/eventos/${event.id}`}
+                            className="block w-full text-center py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold rounded-xl transition-colors"
+                          >
+                            Ver Detalhes e Ingressos
+                          </Link>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -270,7 +296,7 @@ export default function Home() {
           )}
         </section>
 
-        {/* SECÇÃO DE PERGUNTAS FREQUENTES (FAQ) */}
+        {/* FAQ */}
         <section className="bg-neutral-900/50 border-t border-neutral-800 py-16 px-6">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
