@@ -86,7 +86,6 @@ function EventoDetalhesContent() {
         <div className="grid gap-3">
           {ticketTypes.map((ticket) => {
             const isSelected = selectedTicket?.id === ticket.id;
-            // Verifica todos os nomes de colunas comuns no Supabase
             const nomeModalidade = ticket.name || ticket.title || ticket.modalidade || ticket.category_name || ticket.type || 'Inscrição Individual';
 
             return (
@@ -126,7 +125,7 @@ function EventoDetalhesContent() {
       {selectedTicket && (
         <div className="pt-4">
           <Link
-            href={`/checkout/${selectedTicket.id}`}
+            href={`/inscricao/${selectedTicket.id}`}
             className="block w-full bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold py-3.5 rounded-xl transition text-center text-sm shadow-lg shadow-emerald-500/20"
           >
             Avançar para Inscrição (R$ {Number(selectedTicket.price).toFixed(2)})
