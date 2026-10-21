@@ -1,11 +1,11 @@
 'use client';
-export const dynamic = 'force-dynamic';
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, Suspense } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function ConfirmacaoPIX() {
+function ConfirmacaoContent() {
   const { orderId } = useParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,6 +14,7 @@ export default function ConfirmacaoPIX() {
 
   useEffect(() => {
     if (!orderId) return;
+
     async function loadOrder() {
       const { data, error } = await supabase
         .from('orders')
@@ -21,98 +22,116 @@ export default function ConfirmacaoPIX() {
         .eq('id', orderId)
         .single();
 
-      if (!error && data) {
+      if (data) {
         setOrder(data);
         if (data.status === 'paid') setPaid(true);
       }
       setLoading(false);
     }
+
     loadOrder();
+
+    // Inscreve no Realtime do Supabase para atualizar assim que for pago
+    const channel = supabase
+      .channel(`order-${orderId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+          filter: `id=eq.${orderId}`,
+        },
+        (payload) => {
+          if (payload.new.status === 'paid') {
+            setPaid(true);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [orderId]);
 
-  // Simulação de confirmação do webhook do PIX
-  const handleSimularPagamentoPIX = async () => {
+  async function handleSimularPagamentoPIX() {
+    setLoading(true);
+
+    // 1. Atualiza status no Supabase
     const { error } = await supabase
       .from('orders')
       .update({ status: 'paid' })
       .eq('id', orderId);
 
-    if (!error) {
-      setPaid(true);
-      setTimeout(() => {
-        setEmailSent(true);
-      }, 1200);
+    if (error) {
+      alert('Erro ao simular pagamento: ' + error.message);
+      setLoading(false);
+      return;
     }
-  };
+
+    setPaid(true);
+
+    // 2. Dispara webhook no Make/n8n para envio do comprovativo
+    try {
+      await fetch('SEU_WEBHOOK_URL_AQUI', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: orderId,
+          buyer_name: order.buyer_name,
+          buyer_email: order.buyer_email,
+          event_name: 'Sicoob Mons Ultra Trail 2026',
+        }),
+      });
+      setEmailSent(true);
+    } catch (err) {
+      console.error('Erro ao chamar webhook:', err);
+    }
+
+    setLoading(false);
+  }
 
   if (loading) {
-    return <div className="min-h-screen bg-neutral-950 text-white p-12 text-center">Carregando dados da inscrição...</div>;
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
+        <p className="animate-pulse text-neutral-400">A carregar detalhes do pedido...</p>
+      </div>
+    );
   }
 
   if (!order) {
-    return <div className="min-h-screen bg-neutral-950 text-white p-12 text-center">Inscrição não encontrada.</div>;
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center p-4 text-center">
+        <div>
+          <h1 className="text-xl font-bold text-red-500 mb-2">Pedido não encontrado</h1>
+          <Link href="/" className="text-sm underline text-neutral-400">
+            Voltar ao início
+          </Link>
+        </div>
+      </div>
+    );
   }
 
-  const mockPixCode = `00020126580014BR.GOV.BCB.PIX0136vipacesso-mons-2026-520400005303986540${Number(order.total_amount).toFixed(2)}5802BR5920VIPACESSO EVENTOS6009NOVA TRENTO62070503***6304E2B1`;
-
   return (
-    <main className="min-h-screen bg-neutral-950 text-white p-6 md:p-12 flex items-center justify-center">
-      <div className="max-w-xl w-full bg-neutral-900 border border-neutral-800 rounded-2xl p-6 md:p-8">
-        
+    <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4">
+      <div className="max-w-md w-full bg-neutral-900 border border-neutral-800 rounded-2xl p-6 text-center space-y-6">
         {!paid ? (
           <>
-            <div className="text-center mb-6">
-              <span className="bg-emerald-500/10 text-emerald-400 font-bold px-3 py-1 rounded-full text-xs uppercase tracking-wider">
-                Aguardando Pagamento PIX
+            <div className="space-y-2">
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                Pendente PIX
               </span>
-              <h1 className="text-3xl font-extrabold mt-3">Finalize sua Inscrição</h1>
-              <p className="text-neutral-400 text-sm mt-1">Escaneie o QR Code ou copie o código PIX abaixo</p>
+              <h1 className="text-2xl font-bold mt-2">Aguardando Pagamento</h1>
+              <p className="text-xs text-neutral-400">
+                Escaneie o QR Code abaixo no app do seu banco para confirmar a inscrição.
+              </p>
             </div>
 
-            {/* QR Code Simulado */}
-            <div className="bg-white p-4 rounded-xl w-48 h-48 mx-auto mb-6 flex items-center justify-center">
-              <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(mockPixCode)}`} 
-                alt="QR Code PIX" 
-                className="w-full h-full object-contain"
-              />
-            </div>
-
-            {/* Valor e Resumo */}
-            <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 mb-6 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-neutral-400">Atleta:</span>
-                <span className="font-semibold">{order.buyer_name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-neutral-400">Camiseta:</span>
-                <span className="font-semibold">{order.shirt_size}</span>
-              </div>
-              <div className="flex justify-between border-t border-neutral-800 pt-2 text-base font-bold">
-                <span>Total a Pagar:</span>
-                <span className="text-emerald-400">R$ {Number(order.total_amount).toFixed(2)}</span>
-              </div>
-            </div>
-
-            {/* Código Copia e Cola */}
-            <div className="mb-6">
-              <label className="block text-xs text-neutral-400 mb-1">PIX Copia e Cola:</label>
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={mockPixCode} 
-                  className="bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-xs text-neutral-400 w-full truncate outline-none"
-                />
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(mockPixCode);
-                    alert('Código PIX copiado!');
-                  }}
-                  className="bg-neutral-800 hover:bg-neutral-700 text-white font-semibold px-4 rounded-lg text-xs transition whitespace-nowrap"
-                >
-                  Copiar
-                </button>
+            {/* Simulação de QR Code PIX */}
+            <div className="bg-white p-4 rounded-xl inline-block mx-auto">
+              <div className="w-48 h-48 bg-neutral-200 flex items-center justify-center text-black font-mono text-xs">
+                [ QR Code PIX ]
               </div>
             </div>
 
@@ -144,15 +163,23 @@ export default function ConfirmacaoPIX() {
               </p>
             </div>
 
-            <Link 
+            <Link
               href="/"
               className="inline-block bg-white hover:bg-neutral-200 text-black font-bold py-3 px-8 rounded-xl transition text-sm"
             >
-              Voltar para a Vitrine
+              Voltar ao Início
             </Link>
           </div>
         )}
       </div>
     </main>
+  );
+}
+
+export default function ConfirmacaoPIX() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black text-white flex items-center justify-center p-4">Carregando...</div>}>
+      <ConfirmacaoContent />
+    </Suspense>
   );
 }
