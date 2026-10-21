@@ -16,7 +16,6 @@ function EventoDetalhesContent() {
     if (!id) return;
 
     async function loadData() {
-      // 1. Busca o evento pelo ID
       const { data: eventData } = await supabase
         .from('events')
         .select('*')
@@ -26,11 +25,11 @@ function EventoDetalhesContent() {
       if (eventData) {
         setEvent(eventData);
 
-        // 2. Busca os tipos de ingresso relacionados ao evento
         const { data: ticketsData } = await supabase
           .from('ticket_types')
           .select('*')
-          .eq('event_id', id);
+          .eq('event_id', id)
+          .order('price', { ascending: false });
 
         if (ticketsData) {
           setTicketTypes(ticketsData);
@@ -73,7 +72,7 @@ function EventoDetalhesContent() {
       </Link>
 
       <div className="space-y-2">
-        <h1 className="text-3xl font-extrabold">{event.title}</h1>
+        <h1 className="text-3xl font-extrabold">{event.title || event.name}</h1>
         <p className="text-sm text-neutral-400">{event.location} • {event.date}</p>
       </div>
 
@@ -85,25 +84,42 @@ function EventoDetalhesContent() {
         <h2 className="text-lg font-bold">Selecione sua categoria / ingresso</h2>
         
         <div className="grid gap-3">
-          {ticketTypes.map((ticket) => (
-            <div
-              key={ticket.id}
-              onClick={() => setSelectedTicket(ticket)}
-              className={`p-4 rounded-xl border cursor-pointer transition flex items-center justify-between ${
-                selectedTicket?.id === ticket.id
-                  ? 'bg-neutral-800 border-emerald-500'
-                  : 'bg-neutral-900 border-neutral-800 hover:border-neutral-700'
-              }`}
-            >
-              <div>
-                <p className="font-semibold text-sm text-white">{ticket.title}</p>
-                <p className="text-xs text-neutral-400">{ticket.description || 'Inscrição Individual'}</p>
+          {ticketTypes.map((ticket) => {
+            const isSelected = selectedTicket?.id === ticket.id;
+            // Verifica todos os nomes de colunas comuns no Supabase
+            const nomeModalidade = ticket.name || ticket.title || ticket.modalidade || ticket.category_name || ticket.type || 'Inscrição Individual';
+
+            return (
+              <div
+                key={ticket.id}
+                onClick={() => setSelectedTicket(ticket)}
+                className={`p-4 rounded-xl border cursor-pointer transition flex items-center justify-between ${
+                  isSelected
+                    ? 'bg-neutral-800 border-emerald-500 shadow-lg shadow-emerald-500/10'
+                    : 'bg-neutral-900 border-neutral-800 hover:border-neutral-700'
+                }`}
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-base text-white">{nomeModalidade}</span>
+                    {(ticket.distance || ticket.distancia) && (
+                      <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20 font-semibold">
+                        {ticket.distance || ticket.distancia}
+                      </span>
+                    )}
+                  </div>
+                  {ticket.description && (
+                    <p className="text-xs text-neutral-400">{ticket.description}</p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="font-extrabold text-emerald-400 text-lg">
+                    R$ {Number(ticket.price).toFixed(2)}
+                  </p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="font-bold text-emerald-400">R$ {Number(ticket.price).toFixed(2)}</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -111,7 +127,7 @@ function EventoDetalhesContent() {
         <div className="pt-4">
           <Link
             href={`/checkout/${selectedTicket.id}`}
-            className="block w-full bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold py-3.5 rounded-xl transition text-center text-sm"
+            className="block w-full bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold py-3.5 rounded-xl transition text-center text-sm shadow-lg shadow-emerald-500/20"
           >
             Avançar para Inscrição (R$ {Number(selectedTicket.price).toFixed(2)})
           </Link>
