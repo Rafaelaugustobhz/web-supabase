@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -10,7 +10,8 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
-export default function EventDetails() {
+// 1. Todo o nosso código da página passa a ser este componente interno
+function EventContent() {
   const { id } = useParams();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +34,7 @@ export default function EventDetails() {
 
       if (error) {
         console.error('Erro ao buscar evento:', error);
-        // MOCK DE DADOS PARA TESTE VISUAL (Caso a base de dados ainda não tenha tudo)
+        // MOCK DE DADOS PARA TESTE VISUAL
         setEvent({
           id: id,
           title: "Sicoob Mons Ultra Trail 2026",
@@ -43,9 +44,9 @@ export default function EventDetails() {
           event_type: "esporte",
           banner_url: "https://images.unsplash.com/photo-1541252874014-b498f395da78?q=80&w=1200",
           producer_name: "Corre Brasil",
-          has_sectors: false, // Se true, mostra imagem do mapa de setores
-          is_recurring: false, // Se true, mostra calendário (para parques)
-          is_online: false, // Se true, oculta mapa físico
+          has_sectors: false,
+          is_recurring: false,
+          is_online: false,
           current_batch: "2º Lote"
         });
       } else {
@@ -79,7 +80,7 @@ export default function EventDetails() {
   if (!event) return null;
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white flex flex-col">
+    <div className="min-h-screen bg-neutral-950 text-white flex flex-col">
       {/* CABEÇALHO GLOBAL */}
       <header className="border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -161,7 +162,7 @@ export default function EventDetails() {
             </button>
           </div>
 
-          {/* RENDERIZAÇÃO CONDICIONAL: Mapa de Setores (Apenas se has_sectors for true) */}
+          {/* RENDERIZAÇÃO CONDICIONAL: Mapa de Setores */}
           {event.has_sectors && (
             <div>
               <h2 className="text-2xl font-bold mb-6 border-b border-neutral-800 pb-4">Mapa de Setores</h2>
@@ -173,7 +174,7 @@ export default function EventDetails() {
             </div>
           )}
 
-          {/* RENDERIZAÇÃO CONDICIONAL: Localização Física (Apenas se não for online) */}
+          {/* RENDERIZAÇÃO CONDICIONAL: Localização Física */}
           {!event.is_online && (
             <div>
               <h2 className="text-2xl font-bold mb-6 border-b border-neutral-800 pb-4">Localização</h2>
@@ -194,7 +195,7 @@ export default function EventDetails() {
         <div className="w-full lg:w-[400px]">
           <div className="sticky top-28 space-y-6">
             
-            {/* RENDERIZAÇÃO CONDICIONAL: Calendário (Apenas para parques/eventos recorrentes) */}
+            {/* RENDERIZAÇÃO CONDICIONAL: Calendário */}
             {event.is_recurring && (
               <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 shadow-xl">
                 <h3 className="text-sm font-bold text-neutral-400 mb-3">Selecione a data da visita</h3>
@@ -260,10 +261,33 @@ export default function EventDetails() {
                 </button>
               </div>
             </div>
-            
           </div>
         </div>
       </section>
-    </main>
+
+      {/* RODAPÉ */}
+      <footer className="mt-auto border-t border-neutral-800 bg-neutral-950 py-8 px-6 text-center">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="bg-emerald-500 text-black font-black px-2 py-1 rounded-lg text-sm">VA</span>
+            <span className="font-bold tracking-tight">VipAcesso</span>
+          </div>
+          <p className="text-neutral-500 text-sm">VipAcesso: O passaporte oficial para as suas melhores experiências.</p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+// 2. O Export Default agora é o Suspense que engloba a página, evitando o erro da Vercel
+export default function EventDetails() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
+        <div className="animate-pulse text-emerald-500 font-bold text-xl">A preparar a experiência...</div>
+      </main>
+    }>
+      <EventContent />
+    </Suspense>
   );
 }
