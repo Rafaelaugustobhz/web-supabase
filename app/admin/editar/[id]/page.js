@@ -1,3 +1,4 @@
+// ajuste de suspense
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
