@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -10,53 +10,30 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setLoading(true);
 
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: formData.email,
-      password: formData.password,
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
 
-    if (authError) {
-      alert('Erro ao entrar: ' + authError.message);
-      setIsSubmitting(false);
+    setLoading(false);
+
+    if (error) {
+      alert('Erro ao fazer login: ' + error.message);
       return;
     }
 
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', authData.user.id)
-      .single();
-
-    setIsSubmitting(false);
-
-    if (profileError || !profileData) {
-      router.push('/');
-      return;
-    }
-
-    const userRole = profileData.role;
-    if (userRole === 'admin' || userRole === 'producer') {
-      router.push('/admin');
-    } else {
-      router.push('/');
-    }
+    router.push('/');
   };
 
   const handleGoogleLogin = async () => {
@@ -73,7 +50,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex flex-col justify-between">
-      
       <header className="h-20 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-md flex items-center px-6 lg:px-10">
         <Link href="/" className="flex items-center gap-3">
           <span className="bg-emerald-500 text-black font-black px-3 py-1.5 rounded-xl text-lg">VA</span>
@@ -81,12 +57,12 @@ export default function LoginPage() {
         </Link>
       </header>
 
-      <main className="max-w-md w-full mx-auto px-6 py-12">
+      <main className="max-w-md w-full mx-auto px-6 py-10">
         <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-8 shadow-2xl space-y-6">
           
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-black">Acessar a Plataforma</h1>
-            <p className="text-sm text-neutral-400">Entre com sua conta de Participante ou Produtor</p>
+            <h1 className="text-2xl font-black">Entrar na Conta</h1>
+            <p className="text-sm text-neutral-400">Aceda aos seus ingressos e eventos</p>
           </div>
 
           {/* BOTÃO GOOGLE LOGIN */}
@@ -101,7 +77,7 @@ export default function LoginPage() {
               <path fill="#FBBC05" d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.7s.2-2 .4-2.7L1.6 6.4C.6 8.4 0 10.6 0 13s.6 4.6 1.6 6.6l3.7-2.9z"/>
               <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.1-6.7-5.3L1.6 15.6C3.5 19.4 7.4 22 12 22z"/>
             </svg>
-            Entrar com o Google
+            Continuar com o Google
           </button>
 
           <div className="flex items-center gap-4 text-xs text-neutral-600 uppercase tracking-widest">
@@ -112,52 +88,55 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">E-mail</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">E-mail</label>
               <input 
                 type="email" 
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
-                className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none transition-colors"
+                className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none"
                 required 
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">Palavra-passe</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Palavra-passe</label>
               <input 
                 type="password" 
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none transition-colors"
+                className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none"
                 required 
               />
             </div>
 
             <button 
               type="submit" 
-              disabled={isSubmitting}
+              disabled={loading}
               className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/20 mt-2"
             >
-              {isSubmitting ? 'A entrar...' : 'Entrar na Conta'}
+              {loading ? 'A entrar...' : 'Entrar na Conta'}
             </button>
           </form>
 
-          {/* LINK CORRETO PARA A PÁGINA DE CADASTRO QUE CRIÁMOS */}
           <div className="text-center pt-4 border-t border-neutral-800 text-xs text-neutral-400">
             Ainda não tem conta? <Link href="/cadastro" className="text-emerald-400 font-bold hover:underline">Registe-se aqui</Link>
           </div>
-
         </div>
       </main>
 
       <footer className="border-t border-neutral-800 bg-neutral-900 py-6 text-center text-neutral-500 text-xs">
-        <p>© {new Date().getFullYear()} VipAcesso - Todos os direitos reservados.</p>
+        <p>© 2026 VipAcesso - Todos os direitos reservados.</p>
       </footer>
-
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-neutral-950 flex items-center justify-center text-emerald-500 font-bold">A carregar...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
