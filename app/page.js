@@ -31,7 +31,7 @@ export default function HomePage() {
     fetchEvents();
   }, []);
 
-  // Lógica de filtragem: pesquisa por título do evento ou tipo de evento
+  // Lógica de filtragem
   const filteredEvents = events.filter((event) => {
     const searchLower = searchTerm.toLowerCase();
     const titleMatch = event.title?.toLowerCase().includes(searchLower);
@@ -52,7 +52,7 @@ export default function HomePage() {
           <Link href="/login" className="text-sm font-semibold hover:text-emerald-400 transition-colors px-4 py-2">
             Entrar
           </Link>
-          <Link href="/admin" className="text-sm font-bold bg-neutral-800 hover:bg-neutral-700 px-4 py-2 rounded-lg transition-colors">
+          <Link href="/login" className="text-sm font-bold bg-neutral-800 hover:bg-neutral-700 px-4 py-2 rounded-lg transition-colors">
             Área do Produtor
           </Link>
         </div>
@@ -104,22 +104,32 @@ export default function HomePage() {
                   </div>
                 </div>
                 
-                <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
-                  <div>
-                    <h3 className="text-xl font-bold mb-2 line-clamp-2">{event.title}</h3>
-                    <p className="text-sm text-neutral-400 line-clamp-2">{event.description}</p>
-                  </div>
-                  
-                  <div className="space-y-2 text-sm text-neutral-300">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                      <span>{event.event_date ? new Date(event.event_date).toLocaleDateString('pt-BR') : 'Data a definir'}</span>
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-xl font-bold mb-2 line-clamp-2">{event.title}</h3>
+                      <p className="text-sm text-neutral-400 line-clamp-2">{event.description}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                      <span>{event.location || 'Local a definir'}</span>
+                    
+                    <div className="space-y-2 text-sm text-neutral-300">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span>{event.event_date ? new Date(event.event_date).toLocaleDateString('pt-BR') : 'Data a definir'}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <span>{event.location || 'Local a definir'}</span>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Botão de Acesso Adicionado Aqui */}
+                  <Link 
+                    href={`/evento/${event.id}`} 
+                    className="block w-full py-3 mt-6 text-center bg-neutral-800 hover:bg-emerald-500 text-white hover:text-black font-bold rounded-xl transition-colors"
+                  >
+                    Ver Detalhes
+                  </Link>
                 </div>
               </div>
             ))}
