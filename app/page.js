@@ -32,13 +32,11 @@ export default function Home() {
     fetchEvents();
   }, []);
 
-  // Filtrar eventos pelas 5 categorias
   const filteredEvents = events.filter((event) => {
     if (selectedCategory === 'todos') return true;
     return event.event_type === selectedCategory;
   });
 
-  // Verificar se o evento acontece nos próximos 20 dias
   const isUpcomingSoon = (dateString) => {
     const eventDate = new Date(dateString);
     const today = new Date();
@@ -47,7 +45,6 @@ export default function Home() {
     return diffDays >= 0 && diffDays <= 20;
   };
 
-  // Perguntas frequentes (FAQ)
   const faqList = [
     {
       q: "Como eu cancelo ou peço reembolso de ingressos?",
@@ -91,14 +88,14 @@ export default function Home() {
               </Link>
 
               <Link 
-                href="/auth/login" 
+                href="/login" 
                 className="text-sm font-medium text-neutral-300 hover:text-white px-3 py-2 transition-colors"
               >
                 Entrar
               </Link>
 
               <Link 
-                href="/admin" 
+                href="/cadastro?role=producer" 
                 className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-sm transition-all shadow-lg shadow-emerald-500/10"
               >
                 Criar Evento
@@ -229,22 +226,17 @@ export default function Home() {
                         <div className="flex items-center justify-center h-full text-neutral-500">Sem Imagem</div>
                       )}
 
-                      {/* BADGES NO TOPO DA IMAGEM */}
                       <div className="absolute top-3 left-3 flex flex-col gap-2 items-start">
                         {isClose && (
                           <span className="px-3 py-1 text-xs font-bold rounded-full bg-amber-500 text-black uppercase tracking-wider shadow-md animate-pulse">
                             🔥 Acontece em Breve
                           </span>
                         )}
-
-                        {/* Indicador de Lote atual (se preenchido na base de dados) */}
                         {event.batch_name && (
                           <span className="px-3 py-1 text-xs font-bold rounded-full bg-blue-600 text-white uppercase tracking-wider shadow-md">
                             🎫 {event.batch_name}
                           </span>
                         )}
-
-                        {/* Indicador de Esgotado (se marcado como esgotado) */}
                         {event.is_sold_out && (
                           <span className="px-3 py-1 text-xs font-bold rounded-full bg-red-600 text-white uppercase tracking-wider shadow-md">
                             🔴 Esgotado
@@ -252,11 +244,7 @@ export default function Home() {
                         )}
                       </div>
 
-                      <span className={`absolute top-3 right-3 px-3 py-1 text-xs font-semibold rounded-full uppercase tracking-wider ${
-                        event.event_type === 'esporte' 
-                          ? 'bg-emerald-500 text-black' 
-                          : 'bg-purple-600 text-white'
-                      }`}>
+                      <span className="absolute top-3 right-3 px-3 py-1 text-xs font-semibold rounded-full uppercase tracking-wider bg-emerald-500 text-black">
                         {event.event_type || 'Geral'}
                       </span>
                     </div>
@@ -400,7 +388,7 @@ export default function Home() {
               <p className="text-neutral-400">Tenha controlo total sobre as suas vendas, lotes, relatórios de público e check-in num só lugar.</p>
             </div>
             <Link 
-              href="/admin"
+              href="/cadastro?role=producer"
               className="px-8 py-4 rounded-xl bg-white hover:bg-neutral-200 text-black font-bold whitespace-nowrap transition-all shadow-xl"
             >
               Começar a Vender Agora
