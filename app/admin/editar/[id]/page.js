@@ -1,260 +1,258 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import Link from 'next/link';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
-export default function EditarEvento() {
+function EditarEventoContent() {
   const router = useRouter();
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     title: '',
-    eventType: 'esporte',
-    date: '',
-    location: '',
     description: '',
-    rules: '',
-    imageTerms: '',
-    requireImageTerms: true,
+    event_date: '',
+    location: '',
+    event_type: 'esporte',
+    banner_url: '',
+    batch_name: '',
+    is_sold_out: false
   });
 
-  // Estado para os ingressos do evento
-  const [tickets, setTickets] = useState([]);
-
-  // Carrega os dados do evento e os ingressos associados
   useEffect(() => {
-    async function fetchEventData() {
-      if (!id) return;
-      
-      const [eventRes, ticketsRes] = await Promise.all([
-        supabase.from('events').select('*').eq('id', id).single(),
-        supabase.from('tickets').select('*').eq('event_id', id)
-      ]);
+    if (!id) return;
+    async function fetchEvent() {
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-      if (eventRes.error) {
+      if (error) {
+        console.error('Erro ao buscar evento:', error);
         alert('Erro ao carregar dados do evento.');
-        router.push('/admin');
-      } else if (eventRes.data) {
-        const ev = eventRes.data;
+      } else if (data) {
         setFormData({
-          title: ev.title || '',
-          eventType: ev.event_type || 'esporte',
-          date: ev.event_date ? ev.event_date.split('T')[0] : '',
-          location: ev.location || '',
-          description: ev.description || '',
-          rules: ev.rules || '',
-          imageTerms: ev.image_terms || '',
-          requireImageTerms: ev.require_image_terms ?? true,
+          title: data.title || '',
+          description: data.description || '',
+          event_date: data.event_date ? data.event_date.split('T')[0] : '',
+          location: data.location || '',
+          event_type: data.event_type || 'esporte',
+          banner_url: data.banner_url || '',
+          batch_name: data.batch_name || '',
+          is_sold_out: data.is_sold_out || false
         });
       }
-
-      if (ticketsRes.data) {
-        setTickets(ticketsRes.data.map(t => ({
-          id: t.id,
-          name: t.name,
-          price: t.price,
-          quantity: t.quantity || 100,
-          hasHalfPrice: t.has_half_price || false,
-          category: t.category || 'Geral'
-        })));
-      }
-
       setLoading(false);
     }
-    fetchEventData();
-  }, [id, router]);
+    fetchEvent();
+  }, [id]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
-  const addTicket = () => setTickets([...tickets, { id: Date.now(), name: '', price: '', quantity: 100, hasHalfPrice: false, category: 'Geral' }]);
-  const updateTicket = (ticketId, field, value) => setTickets(tickets.map(t => t.id === ticketId ? { ...t, [field]: value } : t));
-  const removeTicket = (ticketId) => { if(tickets.length > 1) setTickets(tickets.filter(t => t.id !== ticketId)); };
-
-  const handleUpdate = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const isOnline = formData.eventType === 'online';
 
-    // 1. Atualiza as informações principais do evento
-    const { error: eventError } = await supabase
+    const { error } = await supabase
       .from('events')
       .update({
         title: formData.title,
         description: formData.description,
-        event_date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
-        location: isOnline ? 'Evento 100% Digital' : formData.location,
-        event_type: formData.eventType,
-        is_online: isOnline,
-        rules: formData.rules,
-        image_terms: formData.imageTerms,
-        require_image_terms: formData.requireImageTerms,
+        event_date: formData.event_date,
+        location: formData.location,
+        event_type: formData.event_type,
+        banner_url: formData.banner_url,
+        batch_name: formData.batch_name,
+        is_sold_out: formData.is_sold_out
       })
       .eq('id', id);
 
-    if (eventError) {
-      alert('Erro ao atualizar o evento: ' + eventError.message);
-      setIsSubmitting(false);
+    setIsSubmitting(false);
+
+    if (error) {
+      alert('Erro ao atualizar evento: ' + error.message);
       return;
     }
 
-    // 2. Atualiza os ingressos: estratégia limpa de apagar os antigos e inserir os atuais atualizados
-    await supabase.from('tickets').delete().eq('event_id', id);
-
-    if (tickets.length > 0) {
-      const ticketsToInsert = tickets.map(t => ({
-        event_id: id,
-        name: t.name,
-        price: parseFloat(t.price) || 0,
-        quantity: parseInt(t.quantity) || 0,
-        has_half_price: t.hasHalfPrice,
-        category: t.category
-      }));
-
-      const { error: ticketsError } = await supabase.from('tickets').insert(ticketsToInsert);
-      if (ticketsError) {
-        alert('Evento atualizado, mas houve erro ao salvar os ingressos: ' + ticketsError.message);
-        setIsSubmitting(false);
-        return;
-      }
-    }
-
-    setIsSubmitting(false);
-    alert('Evento e ingressos atualizados com sucesso!');
+    alert('Evento atualizado com sucesso!');
     router.push('/admin');
   };
 
   if (loading) {
-    return <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center font-bold">A carregar dados para edição...</div>;
+    return (
+      <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
+        <p className="text-neutral-400">A carregar dados do evento...</p>
+      </div>
+    );
   }
 
-  const isOnline = formData.eventType === 'online';
-
   return (
-    <div className="min-h-screen bg-neutral-950 text-white pb-20">
-      <header className="h-20 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-md sticky top-0 z-50 flex items-center px-6 lg:px-10 justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/admin" className="w-10 h-10 bg-neutral-800 hover:bg-neutral-700 rounded-xl flex items-center justify-center">←</Link>
-          <h1 className="text-xl font-bold">Editar Evento</h1>
-        </div>
-        <button onClick={handleUpdate} disabled={isSubmitting} className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl text-sm">
-          {isSubmitting ? 'A guardar...' : 'Salvar Alterações'}
-        </button>
+    <div className="min-h-screen bg-neutral-950 text-white flex flex-col justify-between">
+      <header className="h-20 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-md flex items-center px-6 lg:px-10">
+        <Link href="/admin" className="flex items-center gap-3">
+          <span className="bg-emerald-500 text-black font-black px-3 py-1.5 rounded-xl text-lg">VA</span>
+          <span className="font-bold text-lg">Painel do Produtor - Editar Evento</span>
+        </Link>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 mt-10">
-        <form className="space-y-8" onSubmit={handleUpdate}>
-          
-          {/* INFORMAÇÕES BÁSICAS */}
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 lg:p-8 space-y-6">
-            <h2 className="text-lg font-bold border-b border-neutral-800 pb-4">Informações Básicas</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-neutral-400 mb-2">Nome do Evento *</label>
-                <input type="text" name="title" value={formData.title} onChange={handleChange} className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-white" required />
+      <main className="max-w-2xl w-full mx-auto px-6 py-10">
+        <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-8 shadow-2xl space-y-6">
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-black">Editar Evento</h1>
+            <p className="text-sm text-neutral-400">Atualize as informações do seu evento</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Título do Evento</label>
+              <input 
+                type="text" 
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none"
+                required 
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Descrição</label>
+              <textarea 
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows="4"
+                className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none resize-none"
+                required 
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Data do Evento</label>
+                <input 
+                  type="date" 
+                  name="event_date"
+                  value={formData.event_date}
+                  onChange={handleChange}
+                  className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none"
+                  required 
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-400 mb-2">Categoria *</label>
-                <select name="eventType" value={formData.eventType} onChange={handleChange} className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-white">
-                  <option value="esporte">🏃 Esportes e Corridas</option>
-                  <option value="show">🎵 Festas e Shows</option>
-                  <option value="online">💻 Eventos Online</option>
-                  <option value="congresso">🏛️ Congressos</option>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Localização</label>
+                <input 
+                  type="text" 
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none"
+                  required 
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Tipo de Evento</label>
+                <select 
+                  name="event_type"
+                  value={formData.event_type}
+                  onChange={handleChange}
+                  className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none"
+                >
+                  <option value="esporte">Esporte</option>
+                  <option value="show">Festas e Shows</option>
+                  <option value="online">Eventos Online</option>
+                  <option value="congresso">Congressos e Palestras</option>
+                  <option value="curso">Cursos e Workshops</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-400 mb-2">Data do Evento *</label>
-                <input type="date" name="date" value={formData.date} onChange={handleChange} className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-white" required />
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Nome do Lote</label>
+                <input 
+                  type="text" 
+                  name="batch_name"
+                  value={formData.batch_name}
+                  onChange={handleChange}
+                  placeholder="Ex: 1º Lote VIP"
+                  className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none"
+                />
               </div>
             </div>
-            {!isOnline && (
-              <div>
-                <label className="block text-sm font-medium text-neutral-400 mb-2">Localização *</label>
-                <input type="text" name="location" value={formData.location} onChange={handleChange} className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-white" required={!isOnline} />
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-neutral-400 mb-2">Descrição Detalhada *</label>
-              <textarea name="description" value={formData.description} onChange={handleChange} rows="4" className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-white resize-none" required></textarea>
-            </div>
-          </div>
 
-          {/* INGRESSOS E QUANTIDADES */}
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 lg:p-8 space-y-6">
-            <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
-              <h2 className="text-lg font-bold">Inscrições / Ingressos disponíveis</h2>
-              <button type="button" onClick={addTicket} className="text-emerald-400 text-sm font-bold hover:underline">+ Adicionar Ingresso</button>
-            </div>
-            <div className="space-y-4">
-              {tickets.map((ticket) => (
-                <div key={ticket.id} className="bg-neutral-950 border border-neutral-800 p-4 rounded-xl flex flex-col md:flex-row gap-4 items-end">
-                  <div className="flex-1 w-full">
-                    <label className="block text-xs text-neutral-500 mb-1">Nome/Categoria</label>
-                    <input type="text" value={ticket.name} onChange={(e) => updateTicket(ticket.id, 'name', e.target.value)} className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500" required />
-                  </div>
-                  <div className="w-full md:w-28">
-                    <label className="block text-xs text-neutral-500 mb-1">Preço (R$)</label>
-                    <input type="number" step="0.01" value={ticket.price} onChange={(e) => updateTicket(ticket.id, 'price', e.target.value)} className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500" required />
-                  </div>
-                  <div className="w-full md:w-28">
-                    <label className="block text-xs text-neutral-500 mb-1">Qtd. Vagas</label>
-                    <input type="number" value={ticket.quantity} onChange={(e) => updateTicket(ticket.id, 'quantity', e.target.value)} className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500" required />
-                  </div>
-                  <div className="w-full md:w-36 flex items-center h-10">
-                    <label className="flex items-center gap-2 cursor-pointer text-sm text-neutral-300">
-                      <input type="checkbox" checked={ticket.hasHalfPrice} onChange={(e) => updateTicket(ticket.id, 'hasHalfPrice', e.target.checked)} className="w-4 h-4 accent-emerald-500" /> Meia-Entrada
-                    </label>
-                  </div>
-                  <button type="button" onClick={() => removeTicket(ticket.id)} className="h-10 px-3 text-red-400 hover:bg-red-500/10 rounded-lg text-sm font-bold">X</button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* REGULAMENTO E TERMOS */}
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 lg:p-8 space-y-6">
-            <h2 className="text-lg font-bold border-b border-neutral-800 pb-4">Regulamento e Termos para o Comprador</h2>
             <div>
-              <label className="block text-sm font-medium text-neutral-400 mb-2">Texto do Regulamento Geral</label>
-              <textarea name="rules" value={formData.rules} onChange={handleChange} rows="4" className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-white resize-none"></textarea>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">URL do Banner</label>
+              <input 
+                type="url" 
+                name="banner_url"
+                value={formData.banner_url}
+                onChange={handleChange}
+                placeholder="https://exemplo.com/imagem.jpg"
+                className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none"
+              />
             </div>
-            <div className="pt-4 border-t border-neutral-800">
-              <label className="flex items-center gap-3 cursor-pointer p-4 bg-neutral-950 rounded-xl border border-neutral-800 mb-4">
-                <input type="checkbox" name="requireImageTerms" checked={formData.requireImageTerms} onChange={handleChange} className="w-5 h-5 accent-emerald-500" />
-                <span className="text-sm font-medium">Exigir aceite do Termo de Uso de Imagem e Comunicação no Checkout</span>
+
+            <div className="pt-2">
+              <label className="flex items-center gap-3 cursor-pointer p-4 bg-neutral-950 rounded-xl border border-neutral-800">
+                <input 
+                  type="checkbox" 
+                  name="is_sold_out"
+                  checked={formData.is_sold_out}
+                  onChange={handleChange}
+                  className="w-4 h-4 accent-emerald-500 cursor-pointer"
+                />
+                <span className="text-xs text-neutral-300">
+                  Marcar evento como <strong className="text-white">Esgotado</strong>
+                </span>
               </label>
-              {formData.requireImageTerms && (
-                <div>
-                  <label className="block text-sm font-medium text-neutral-400 mb-2">Texto do Termo de Uso de Imagem (Opcional)</label>
-                  <textarea name="imageTerms" value={formData.imageTerms} onChange={handleChange} rows="3" className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-white resize-none text-sm"></textarea>
-                </div>
-              )}
             </div>
-          </div>
 
-          {/* MÍDIAS */}
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-4">
-            <h2 className="text-lg font-bold border-b border-neutral-800 pb-4">Mídias do Evento</h2>
-            <div className="w-full h-32 bg-neutral-950 border-2 border-dashed border-neutral-700 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 transition-all text-center">
-              <span className="text-2xl mb-1">📸</span>
-              <p className="text-sm font-semibold text-neutral-400">Banner Principal</p>
-              <p className="text-xs text-neutral-600 mt-1">1200 x 600px recomendado</p>
+            <div className="flex gap-4 pt-4">
+              <Link 
+                href="/admin"
+                className="w-1/2 py-4 bg-neutral-800 hover:bg-neutral-700 text-center text-white font-bold rounded-xl text-sm transition-all"
+              >
+                Cancelar
+              </Link>
+              <button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="w-1/2 py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/20"
+              >
+                {isSubmitting ? 'A salvar...' : 'Salvar Alterações'}
+              </button>
             </div>
-          </div>
-
-        </form>
+          </form>
+        </div>
       </main>
+
+      <footer className="border-t border-neutral-800 bg-neutral-900 py-6 text-center text-neutral-500 text-xs">
+        <p>© {new Date().getFullYear()} VipAcesso - Todos os direitos reservados.</p>
+      </footer>
     </div>
+  );
+}
+
+export default function EditarEventoPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-neutral-950 flex items-center justify-center text-emerald-500 font-bold">A carregar editor...</div>}>
+      <EditarEventoContent />
+    </Suspense>
   );
 }
