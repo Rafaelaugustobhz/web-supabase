@@ -123,9 +123,9 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* Botão de Acesso Adicionado Aqui */}
+                  {/* Botão de Acesso Corrigido para /eventos/ */}
                   <Link 
-                    href={`/evento/${event.id}`} 
+                    href={`/eventos/${event.id}`} 
                     className="block w-full py-3 mt-6 text-center bg-neutral-800 hover:bg-emerald-500 text-white hover:text-black font-bold rounded-xl transition-colors"
                   >
                     Ver Detalhes
