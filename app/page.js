@@ -43,7 +43,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex flex-col font-sans">
       
-      {/* CABEÇALHO / HEADER CORRIGIDO */}
+      {/* CABEÇALHO / HEADER */}
       <header className="h-20 border-b border-neutral-800 bg-neutral-900/90 backdrop-blur-md flex items-center justify-between px-6 lg:px-10 sticky top-0 z-50 transition-all">
         <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <span className="bg-emerald-500 text-black font-black px-3 py-1.5 rounded-xl text-lg shadow-lg shadow-emerald-500/20">VA</span>
@@ -149,10 +149,10 @@ export default function HomePage() {
                 const imageToDisplay = event.thumbnail_url || event.banner_url;
                 
                 return (
-                  <Link href={`/eventos/${event.id}`} key={event.id} className="group flex flex-col bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-500/5 transition-all duration-300">
+                  <div key={event.id} className="group flex flex-col bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-500/5 transition-all duration-300">
                     
-                    {/* Imagem do Card */}
-                    <div className="h-48 bg-neutral-800 relative overflow-hidden">
+                    {/* Imagem do Card (Clicável) */}
+                    <Link href={`/eventos/${event.id}`} className="h-48 bg-neutral-800 relative overflow-hidden block">
                       {imageToDisplay ? (
                         <img src={imageToDisplay} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out" />
                       ) : (
@@ -173,12 +173,14 @@ export default function HomePage() {
                           ESGOTADO
                         </div>
                       )}
-                    </div>
+                    </Link>
                     
                     {/* Corpo do Card */}
                     <div className="p-5 flex-1 flex flex-col justify-between">
                       <div>
-                        <h3 className="text-lg font-bold mb-2 line-clamp-2 leading-tight group-hover:text-emerald-400 transition-colors">{event.title}</h3>
+                        <Link href={`/eventos/${event.id}`}>
+                          <h3 className="text-lg font-bold mb-2 line-clamp-2 leading-tight group-hover:text-emerald-400 transition-colors">{event.title}</h3>
+                        </Link>
                         
                         <div className="space-y-2 mt-4 text-xs font-medium text-neutral-400">
                           <div className="flex items-center gap-2.5">
@@ -196,8 +198,17 @@ export default function HomePage() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Botão Ver Detalhes */}
+                      <Link 
+                        href={`/eventos/${event.id}`} 
+                        className="block w-full py-2.5 mt-6 text-center bg-neutral-800 hover:bg-emerald-500 text-white hover:text-black text-xs font-bold rounded-xl transition-colors shadow-md"
+                      >
+                        Ver Detalhes
+                      </Link>
                     </div>
-                  </Link>
+
+                  </div>
                 );
               })}
             </div>
@@ -299,7 +310,7 @@ export default function HomePage() {
           </div>
           
           <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-neutral-900 text-xs text-neutral-600">
-            <p>© {new Date().getFullYear()} VipAcesso Pro. Todos os direitos reservados.</p>
+            <p>© 2026 VipAcesso Pro. Todos os direitos reservados.</p>
             <div className="flex gap-4 mt-4 md:mt-0">
               <Link href="#" className="hover:text-neutral-400">Termos de Uso</Link>
               <Link href="#" className="hover:text-neutral-400">Privacidade</Link>
