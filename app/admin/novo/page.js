@@ -14,7 +14,6 @@ export default function NovoEvento() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // No futuro, os dados do produtor virão da sessão (auth)
   const producerData = {
     nome: 'KW Eventos',
     email: 'kweventos00@gmail.com',
@@ -31,7 +30,8 @@ export default function NovoEvento() {
     thumbnailUrl: '',
     bannerUrl: '',
     documentUrl: '',
-    batchName: '1º Lote'
+    batchName: '1º Lote',
+    maxInstallments: '12' // <--- Adicionado aqui
   });
 
   const [tickets, setTickets] = useState([
@@ -69,7 +69,8 @@ export default function NovoEvento() {
         banner_url: formData.bannerUrl,
         document_url: formData.documentUrl,
         batch_name: formData.batchName,
-        is_sold_out: false
+        is_sold_out: false,
+        max_installments: formData.maxInstallments // <--- Adicionado aqui no envio
       }])
       .select()
       .single();
@@ -148,12 +149,26 @@ export default function NovoEvento() {
               </div>
             </div>
 
-            {!isOnline && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {!isOnline && (
+                <div>
+                  <label className="block text-xs font-bold text-neutral-400 mb-2 uppercase tracking-wider">Localização Física *</label>
+                  <input type="text" name="location" value={formData.location} onChange={handleChange} placeholder="Ex: Ginásio Municipal de Porto Belo, SC" className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-white outline-none" required={!isOnline} />
+                </div>
+              )}
+
+              {/* CAMPO DE MÁXIMO DE PARCELAS */}
               <div>
-                <label className="block text-xs font-bold text-neutral-400 mb-2 uppercase tracking-wider">Localização Física *</label>
-                <input type="text" name="location" value={formData.location} onChange={handleChange} placeholder="Ex: Ginásio Municipal de Porto Belo, SC" className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-white outline-none" required={!isOnline} />
+                <label className="block text-xs font-bold text-neutral-400 mb-2 uppercase tracking-wider">Máximo de Parcelas no Cartão</label>
+                <select name="maxInstallments" value={formData.maxInstallments} onChange={handleChange} className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-white outline-none">
+                  <option value="1">À vista (1x)</option>
+                  <option value="3">Até 3x sem juros</option>
+                  <option value="6">Até 6x</option>
+                  <option value="10">Até 10x</option>
+                  <option value="12">Até 12x</option>
+                </select>
               </div>
-            )}
+            </div>
             
             <div>
               <label className="block text-xs font-bold text-neutral-400 mb-2 uppercase tracking-wider">Descrição Detalhada *</label>
@@ -236,7 +251,7 @@ export default function NovoEvento() {
 
           {/* TERMOS E REGULAMENTO */}
           <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 lg:p-8 space-y-6 shadow-xl">
-            <h2 className="text-lg font-bold border-b border-neutral-800 pb-4 text-emerald-400">4. Informações Legais</h2>
+            <h2 className="text-lg font-bold border-b border-neutral-800 pb-4 text-emerald-400">4. Informações Legal</h2>
             <div>
               <label className="block text-xs font-bold text-neutral-400 mb-2 uppercase tracking-wider">Regulamento ou Termos (Opcional)</label>
               <p className="text-[10px] text-neutral-500 mb-2">Escreva avisos breves, restrições de idade ou políticas de reembolso.</p>

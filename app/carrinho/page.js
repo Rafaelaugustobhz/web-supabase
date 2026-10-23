@@ -83,9 +83,14 @@ export default function CarrinhoPage() {
       return;
     }
 
-    alert('Inscrição e dados do participante registados com sucesso! Redirecionando...');
-    localStorage.removeItem('vipAcesso_cart');
-    router.push('/');
+    // Salva os dados do comprador no carrinho e vai para a página de pagamento/confirmação
+    const currentCart = JSON.parse(localStorage.getItem('vipAcesso_cart') || '{}');
+    localStorage.setItem('vipAcesso_cart', JSON.stringify({
+      ...currentCart,
+      buyer: buyerData
+    }));
+
+    router.push('/confirmacao/order-mock-id');
   };
 
   if (!cartData || !cartData.items || cartData.items.length === 0) {

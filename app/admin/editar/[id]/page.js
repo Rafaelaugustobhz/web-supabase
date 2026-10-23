@@ -16,7 +16,7 @@ function EditarEventoContent() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Estado para os dados do evento
+  // Estado para os dados do evento com max_installments incluído
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -25,7 +25,8 @@ function EditarEventoContent() {
     event_type: 'esporte',
     banner_url: '',
     batch_name: '',
-    is_sold_out: false
+    is_sold_out: false,
+    max_installments: '12'
   });
 
   // Estado para os bilhetes
@@ -34,7 +35,6 @@ function EditarEventoContent() {
   useEffect(() => {
     if (!id) return;
     async function fetchEventAndTickets() {
-      // Busca os dados do evento e os bilhetes associados ao mesmo tempo
       const [eventRes, ticketsRes] = await Promise.all([
         supabase.from('events').select('*').eq('id', id).single(),
         supabase.from('tickets').select('*').eq('event_id', id)
@@ -52,7 +52,8 @@ function EditarEventoContent() {
           event_type: eventRes.data.event_type || 'esporte',
           banner_url: eventRes.data.banner_url || '',
           batch_name: eventRes.data.batch_name || '',
-          is_sold_out: eventRes.data.is_sold_out || false
+          is_sold_out: eventRes.data.is_sold_out || false,
+          max_installments: eventRes.data.max_installments || '12'
         });
       }
 
@@ -75,7 +76,6 @@ function EditarEventoContent() {
     }));
   };
 
-  // Funções para gerir os bilhetes dinamicamente
   const handleTicketChange = (index, e) => {
     const { name, value, type, checked } = e.target;
     const updatedTickets = [...tickets];
@@ -86,26 +86,24 @@ function EditarEventoContent() {
   const addTicket = () => {
     setTickets([
       ...tickets,
-      { name: '', price: '', quantity: '', has_half_price: false, requires_shirt_size: false } // Bilhete novo sem ID (será criado no Supabase)
+      { name: '', price: '', quantity: '', has_half_price: false, requires_shirt_size: false }
     ]);
   };
 
   const removeTicket = async (index) => {
     const ticketToRemove = tickets[index];
 
-    // Se o bilhete já tem um ID, significa que existe na base de dados e precisa de ser apagado lá também
     if (ticketToRemove.id) {
        const confirmDelete = window.confirm("Tem a certeza que deseja eliminar este bilhete? Esta ação é irreversível.");
        if (!confirmDelete) return;
 
        const { error } = await supabase.from('tickets').delete().eq('id', ticketToRemove.id);
        if (error) {
-           alert("Erro ao eliminar bilhete na base de dados: " + error.message);
-           return;
+            alert("Erro ao eliminar bilhete na base de dados: " + error.message);
+            return;
        }
     }
 
-    // Remove do estado local
     const updatedTickets = tickets.filter((_, i) => i !== index);
     setTickets(updatedTickets);
   };
@@ -114,7 +112,7 @@ function EditarEventoContent() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // 1. Atualizar os dados do Evento
+    // 1. Atualizar os dados do Evento incluindo max_installments
     const { error: eventError } = await supabase
       .from('events')
       .update({
@@ -125,7 +123,8 @@ function EditarEventoContent() {
         event_type: formData.event_type,
         banner_url: formData.banner_url,
         batch_name: formData.batch_name,
-        is_sold_out: formData.is_sold_out
+        is_sold_out: formData.is_sold_out,
+        max_installments: formData.max_installments
       })
       .eq('id', id);
 
@@ -136,7 +135,6 @@ function EditarEventoContent() {
     }
 
     // 2. Guardar/Atualizar Bilhetes
-    // Separar bilhetes novos (sem ID) dos bilhetes existentes (com ID)
     const newTickets = tickets.filter(t => !t.id).map(t => ({
         ...t,
         event_id: id,
@@ -150,7 +148,6 @@ function EditarEventoContent() {
         quantity: parseInt(t.quantity)
     }));
 
-    // Inserir os novos
     if (newTickets.length > 0) {
         const { error: insertError } = await supabase.from('tickets').insert(newTickets);
         if (insertError) {
@@ -159,7 +156,6 @@ function EditarEventoContent() {
         }
     }
 
-    // Atualizar os existentes (usando um ciclo para atualizar um a um)
     for (const ticket of existingTickets) {
         const { error: updateError } = await supabase
             .from('tickets')
@@ -245,7 +241,7 @@ function EditarEventoContent() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Tipo de Evento</label>
                   <select 
@@ -265,6 +261,19 @@ function EditarEventoContent() {
                     type="text" name="batch_name" value={formData.batch_name} onChange={handleChange} placeholder="Ex: 1º Lote VIP"
                     className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Máximo de Parcelas</label>
+                  <select 
+                    name="max_installments" value={formData.max_installments} onChange={handleChange}
+                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none"
+                  >
+                    <option value="1">À vista (1x)</option>
+                    <option value="3">Até 3x sem juros</option>
+                    <option value="6">Até 6x</option>
+                    <option value="10">Até 10x</option>
+                    <option value="12">Até 12x</option>
+                  </select>
                 </div>
               </div>
 
