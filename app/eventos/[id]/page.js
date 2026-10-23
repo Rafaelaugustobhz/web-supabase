@@ -162,7 +162,7 @@ function EventContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
                 {/* Card Localização com Mapa */}
-                <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col justify-between space-y-3 shadow-lg">
+                <div className="bg-neutral-900 border border-emerald-500/50 rounded-2xl p-5 flex flex-col justify-between space-y-4 shadow-lg">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Localização</h3>
                     <a 
@@ -176,7 +176,7 @@ function EventContent() {
                   </div>
                   
                   {/* Mapa incorporado do Google Maps */}
-                  <div className="w-full h-32 bg-neutral-950 rounded-xl overflow-hidden border border-neutral-800 relative">
+                  <div className="w-full h-36 bg-neutral-950 rounded-xl overflow-hidden border border-neutral-800 relative">
                     <iframe 
                       src={'https://maps.google.com/maps?q=' + encodeURIComponent(event.map_url || event.location) + '&output=embed'}
                       width="100%" 
@@ -195,7 +195,7 @@ function EventContent() {
                 </div>
 
                 {/* Card Realização / Produtor */}
-                <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 flex flex-col justify-between shadow-lg">
+                <div className="bg-neutral-900 border border-emerald-500/50 rounded-2xl p-5 flex flex-col justify-between shadow-lg">
                   <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
                     <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Realização</h3>
                     <span className="text-[10px] bg-emerald-500/10 text-emerald-400 font-semibold px-2.5 py-0.5 rounded-full border border-emerald-500/20">Verificado Pro</span>
@@ -254,7 +254,7 @@ function EventContent() {
 
           {/* COLUNA DIREITA: INGRESSOS E CARRINHO (COMPACTADA) */}
           <div className="w-full lg:w-[380px]">
-            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 lg:p-5 sticky top-28 space-y-4 shadow-2xl">
+          <div className="bg-neutral-900 border border-emerald-500/50 rounded-2xl p-4 lg:p-5 sticky top-28 space-y-4 shadow-2xl">
               <h3 className="text-sm font-bold border-b border-neutral-800 pb-2.5">Ingressos e Inscrições</h3>
               
               {/* Mini Card Ultra Compacto */}
