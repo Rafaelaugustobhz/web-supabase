@@ -37,7 +37,7 @@ function EventContent() {
   }, [id]);
 
   const handleQuantityChange = (ticket, type, shirtSize, delta) => {
-    const key = `${ticket.id}_${type}_${shirtSize || 'none'}`;
+    const key = ticket.id + '_' + type + '_' + (shirtSize || 'none');
     setSelections(prev => {
       const currentObj = prev[key] || { quantity: 0, ticket, type, shirtSize };
       const newQty = Math.max(0, currentObj.quantity + delta);
@@ -70,9 +70,9 @@ function EventContent() {
 
   const handleContinuar = () => {
     const cartItems = Object.values(selections).map(item => ({
-      id: `${item.ticket.id}_${item.type}_${item.shirtSize || 'none'}`,
+      id: item.ticket.id + '_' + item.type + '_' + (item.shirtSize || 'none'),
       ticket_id: item.ticket.id,
-      name: `${item.ticket.name} (${item.type})${item.shirtSize ? ` - Camisa: ${item.shirtSize}` : ''}`,
+      name: item.ticket.name + ' (' + item.type + ')' + (item.shirtSize ? ' - Camisa: ' + item.shirtSize : ''),
       price: item.type === 'Meia' ? item.ticket.price / 2 : item.ticket.price,
       quantity: item.quantity,
       shirtSize: item.shirtSize || null,
@@ -92,7 +92,7 @@ function EventContent() {
   if (!event) return null;
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white flex flex-col justify-between">
+    <div className="min-h-screen bg-neutral-950 text-white flex flex-col justify-between font-sans">
       <div>
         {/* CABEÇALHO */}
         <header className="border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-md sticky top-0 z-50">
@@ -109,7 +109,7 @@ function EventContent() {
 
         {/* BANNER DO EVENTO */}
         <section className="relative w-full bg-neutral-900 border-b border-neutral-800">
-          <div className="absolute inset-0 bg-cover bg-center opacity-20 blur-2xl" style={{ backgroundImage: `url(${event.banner_url})` }}></div>
+          <div className="absolute inset-0 bg-cover bg-center opacity-20 blur-2xl" style={{ backgroundImage: 'url(' + event.banner_url + ')' }}></div>
           <div className="relative max-w-7xl mx-auto px-6 py-12 flex flex-col lg:flex-row gap-8 items-center">
             <div className="flex-1 w-full">
               <div className="flex items-center gap-3 mb-4">
@@ -136,7 +136,7 @@ function EventContent() {
             {/* Detalhes */}
             <div>
               <h2 className="text-2xl font-bold mb-4 border-b border-neutral-800 pb-3">Detalhes do Evento</h2>
-              <div className={`text-neutral-400 whitespace-pre-line leading-relaxed ${expandedDesc ? '' : 'line-clamp-4'}`}>
+              <div className={'text-neutral-400 whitespace-pre-line leading-relaxed ' + (expandedDesc ? '' : 'line-clamp-4')}>
                 {event.description}
               </div>
               <button onClick={() => setExpandedDesc(!expandedDesc)} className="mt-3 text-emerald-400 text-sm font-bold hover:underline">
@@ -144,37 +144,11 @@ function EventContent() {
               </button>
             </div>
 
-            {/* Localização / Mapa */}
-            {!event.is_online && (
-              <div>
-                <h2 className="text-2xl font-bold mb-4 border-b border-neutral-800 pb-3">Localização</h2>
-                <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-neutral-800 rounded-xl border border-neutral-700 flex items-center justify-center text-xl">
-                      📍
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-white">{event.location}</h4>
-                      <p className="text-xs text-neutral-400 mt-0.5">Endereço oficial do evento</p>
-                    </div>
-                  </div>
-                  <a 
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-emerald-400 rounded-xl text-xs font-bold transition-colors"
-                  >
-                    Ver rotas no Google Maps
-                  </a>
-                </div>
-              </div>
-            )}
-
             {/* Regulamento */}
             {event.rules && (
               <div>
                 <h2 className="text-2xl font-bold mb-4 border-b border-neutral-800 pb-3">Regulamento</h2>
-                <div className={`text-neutral-400 text-sm whitespace-pre-line p-6 bg-neutral-900 border border-neutral-800 rounded-xl leading-relaxed ${expandedRules ? '' : 'line-clamp-3'}`}>
+                <div className={'text-neutral-400 text-sm whitespace-pre-line p-6 bg-neutral-900 border border-neutral-800 rounded-xl leading-relaxed ' + (expandedRules ? '' : 'line-clamp-3')}>
                   {event.rules}
                 </div>
                 <button onClick={() => setExpandedRules(!expandedRules)} className="mt-3 text-emerald-400 text-sm font-bold hover:underline">
@@ -183,45 +157,143 @@ function EventContent() {
               </div>
             )}
 
-            {/* Realização / Produtor */}
-            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center sm:items-start gap-6">
-              <div className="w-16 h-16 bg-neutral-800 rounded-full border border-neutral-700 flex items-center justify-center text-xl font-bold text-emerald-400">
-                {event.producer_name ? event.producer_name.charAt(0) : 'P'}
+            {/* LOCALIZAÇÃO E REALIZAÇÃO (LADO A LADO) */}
+            {!event.is_online && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* Card Localização com Mapa */}
+                <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col justify-between space-y-3 shadow-lg">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Localização</h3>
+                    <a 
+                      href={'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(event.location)} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-emerald-400 text-xs font-bold hover:underline"
+                    >
+                      Ampliar ↗
+                    </a>
+                  </div>
+                  
+                  {/* Mapa incorporado do Google Maps */}
+                  <div className="w-full h-32 bg-neutral-950 rounded-xl overflow-hidden border border-neutral-800 relative">
+                    <iframe 
+                      src={'https://maps.google.com/maps?q=' + encodeURIComponent(event.map_url || event.location) + '&output=embed'}
+                      width="100%" 
+                      height="100%" 
+                      style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg)' }} 
+                      allowFullScreen="" 
+                      loading="lazy"
+                      title="Mapa do Evento"
+                    ></iframe>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-white text-sm truncate">{event.location}</h4>
+                    <p className="text-[11px] text-neutral-400">Endereço oficial do evento</p>
+                  </div>
+                </div>
+
+                {/* Card Realização / Produtor */}
+                <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 flex flex-col justify-between shadow-lg">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
+                    <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Realização</h3>
+                    <span className="text-[10px] bg-emerald-500/10 text-emerald-400 font-semibold px-2.5 py-0.5 rounded-full border border-emerald-500/20">Verificado Pro</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-5 py-6 my-auto">
+                    <div className="w-16 h-16 bg-neutral-800 rounded-2xl border border-neutral-700 flex items-center justify-center text-2xl font-bold text-emerald-400 shrink-0 shadow-inner">
+                      {event.producer_name ? event.producer_name.charAt(0) : 'P'}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <h4 className="font-bold text-white text-base sm:text-lg truncate">{event.producer_name || 'KW Eventos'}</h4>
+                      <p className="text-xs sm:text-sm text-neutral-300 truncate flex items-center gap-2">
+                        <span className="text-emerald-400">📧</span> {event.producer_email || 'kweventos00@gmail.com'}
+                      </p>
+                      <p className="text-xs sm:text-sm text-neutral-300 truncate flex items-center gap-2">
+                        <span className="text-emerald-400">📞</span> {event.producer_phone || '(47) 99953-4242'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] text-neutral-500 pt-3 border-t border-neutral-800/80 flex items-center justify-between">
+                    <span>Parceiro Oficial VipAcesso</span>
+                    <span className="text-emerald-400 font-medium">Seguro & Garantido</span>
+                  </div>
+                </div>
+
               </div>
-              <div className="text-center sm:text-left space-y-1">
-                <h3 className="text-neutral-500 text-xs font-bold uppercase tracking-widest">Realização</h3>
-                <h2 className="text-xl font-bold text-white">{event.producer_name || 'KW Eventos'}</h2>
-                <p className="text-sm text-neutral-400 pt-1">📧 {event.producer_email || 'kweventos00@gmail.com'}</p>
-                <p className="text-sm text-neutral-400">📞 {event.producer_phone || '(47) 99953-4242'}</p>
+            )}
+
+          
+            
+
+            {/* Apoiadores / Patrocinadores (Se houver) */}
+            {event.supporters_logos && (
+              <div>
+                <h2 className="text-xl font-bold mb-3 border-b border-neutral-800 pb-2">Apoiadores</h2>
+                <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex flex-wrap items-center gap-4">
+                  {event.supporters_logos.split(',').map((url, idx) => (
+                    <img key={idx} src={url.trim()} alt="Apoiador" className="h-12 object-contain rounded-lg bg-neutral-950 p-2 border border-neutral-800" />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Imagem do Kit do Evento (Se houver) */}
+            {event.kit_images_url && (
+              <div>
+                <h2 className="text-xl font-bold mb-3 border-b border-neutral-800 pb-2">Kit do Evento</h2>
+                <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 overflow-hidden">
+                  <img src={event.kit_images_url} alt="Kit do Evento" className="w-full max-h-96 object-cover rounded-xl border border-neutral-800" />
+                </div>
+              </div>
+            )}
 
           </div>
 
-          {/* COLUNA DIREITA: INGRESSOS E CARRINHO */}
-          <div className="w-full lg:w-[420px]">
-            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 sticky top-28 space-y-6 shadow-2xl">
-              <h3 className="text-lg font-bold border-b border-neutral-800 pb-3">Ingressos e Inscrições</h3>
+          {/* COLUNA DIREITA: INGRESSOS E CARRINHO (COMPACTADA) */}
+          <div className="w-full lg:w-[380px]">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 lg:p-5 sticky top-28 space-y-4 shadow-2xl">
+              <h3 className="text-sm font-bold border-b border-neutral-800 pb-2.5">Ingressos e Inscrições</h3>
               
+              {/* Mini Card Ultra Compacto */}
+              <div className="flex items-center gap-3 pb-3 border-b border-neutral-800">
+                <div className="w-16 h-14 bg-neutral-800 rounded-lg overflow-hidden relative border border-neutral-800 shrink-0">
+                  {(event.thumbnail_url || event.banner_url) ? (
+                    <img src={event.thumbnail_url || event.banner_url} alt={event.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-neutral-600 text-[9px] font-bold uppercase">Sem Img</div>
+                  )}
+                  <div className="absolute top-0.5 left-0.5 bg-emerald-500 text-black font-black text-[7px] px-1 py-0.5 rounded uppercase tracking-wider">
+                    {event.event_type || 'Evento'}
+                  </div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-[9px] text-neutral-500 font-bold uppercase tracking-wider block">Inscrição para</span>
+                  <h4 className="font-bold text-white text-xs leading-tight truncate">{event.title}</h4>
+                </div>
+              </div>
+
               {ticketsData.length === 0 ? (
-                <p className="text-neutral-500 text-sm text-center py-6">Nenhum ingresso disponível no momento.</p>
+                <p className="text-neutral-500 text-xs text-center py-4">Nenhum ingresso disponível no momento.</p>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-3">
                   {ticketsData.map(ticket => (
                     <TicketItem key={ticket.id} ticket={ticket} selections={selections} handleQuantityChange={handleQuantityChange} />
                   ))}
                 </div>
               )}
 
-              <div className="pt-4 border-t border-neutral-700">
-                <div className="flex justify-between items-center mb-6">
-                  <span className="text-neutral-400 font-medium">Subtotal</span>
-                  <span className="text-2xl font-black text-white">{subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+              <div className="pt-3 border-t border-neutral-700">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-xs text-neutral-400 font-medium">Subtotal</span>
+                  <span className="text-xl font-black text-white">{subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                 </div>
                 <button 
                   onClick={handleContinuar} 
                   disabled={subtotal === 0} 
-                  className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${subtotal > 0 ? 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/20' : 'bg-neutral-800 text-neutral-500 cursor-not-allowed'}`}
+                  className={'w-full py-3 rounded-xl font-bold text-sm transition-all ' + (subtotal > 0 ? 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/20' : 'bg-neutral-800 text-neutral-500 cursor-not-allowed')}
                 >
                   Continuar
                 </button>
@@ -250,20 +322,22 @@ function TicketItem({ ticket, selections, handleQuantityChange }) {
   const [shirt, setShirt] = useState(ticket.requires_shirt_size ? 'M' : '');
 
   return (
-    <div className="pb-4 border-b border-neutral-800/80 last:border-0 space-y-3">
-      <div>
-        <h4 className="font-bold text-white text-sm">{ticket.name}</h4>
-        <p className="text-emerald-400 font-bold text-sm">R$ {ticket.price.toFixed(2)}</p>
-        <p className="text-xs text-neutral-500 mt-0.5">Vagas restantes: {ticket.quantity}</p>
+    <div className="pb-3 border-b border-neutral-800/80 last:border-0 space-y-2">
+      <div className="flex justify-between items-start">
+        <div>
+          <h4 className="font-bold text-white text-xs">{ticket.name}</h4>
+          <p className="text-emerald-400 font-bold text-xs">R$ {ticket.price.toFixed(2)}</p>
+        </div>
+        <span className="text-[10px] text-neutral-500">Vagas: {ticket.quantity}</span>
       </div>
 
       {ticket.requires_shirt_size && (
-        <div>
-          <label className="block text-xs text-neutral-400 mb-1">Tamanho da Camisa:</label>
+        <div className="flex items-center justify-between bg-neutral-950 px-3 py-1.5 rounded-lg border border-neutral-800">
+          <span className="text-[11px] text-neutral-400">Tamanho da Camisa:</span>
           <select 
             value={shirt} 
             onChange={(e) => setShirt(e.target.value)}
-            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-emerald-500"
+            className="bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-[11px] text-white outline-none focus:border-emerald-500"
           >
             <option value="P">P</option>
             <option value="M">M</option>
@@ -274,25 +348,25 @@ function TicketItem({ ticket, selections, handleQuantityChange }) {
         </div>
       )}
 
-      <div className="flex justify-between items-center bg-neutral-950 p-2.5 rounded-xl border border-neutral-800">
+      <div className="flex justify-between items-center bg-neutral-950 px-3 py-1.5 rounded-xl border border-neutral-800">
         <span className="text-xs font-medium text-neutral-300">Inteira</span>
-        <div className="flex items-center gap-3 bg-neutral-900 rounded-lg p-1 border border-neutral-700">
-          <button onClick={() => handleQuantityChange(ticket, 'Inteira', ticket.requires_shirt_size ? shirt : null, -1)} className="w-7 h-7 font-bold text-neutral-400 hover:text-white">−</button>
-          <span className="w-4 text-center font-bold text-xs">{selections[`${ticket.id}_Inteira_${ticket.requires_shirt_size ? shirt : 'none'}`]?.quantity || 0}</span>
-          <button onClick={() => handleQuantityChange(ticket, 'Inteira', ticket.requires_shirt_size ? shirt : null, 1)} className="w-7 h-7 font-bold text-emerald-400">+</button>
+        <div className="flex items-center gap-2 bg-neutral-900 rounded-lg p-0.5 border border-neutral-700">
+          <button onClick={() => handleQuantityChange(ticket, 'Inteira', ticket.requires_shirt_size ? shirt : null, -1)} className="w-6 h-6 font-bold text-neutral-400 hover:text-white flex items-center justify-center">−</button>
+          <span className="w-4 text-center font-bold text-xs">{selections[ticket.id + '_Inteira_' + (ticket.requires_shirt_size ? shirt : 'none')]?.quantity || 0}</span>
+          <button onClick={() => handleQuantityChange(ticket, 'Inteira', ticket.requires_shirt_size ? shirt : null, 1)} className="w-6 h-6 font-bold text-emerald-400 flex items-center justify-center">+</button>
         </div>
       </div>
 
       {ticket.has_half_price && (
-        <div className="flex justify-between items-center bg-neutral-950 p-2.5 rounded-xl border border-neutral-800">
+        <div className="flex justify-between items-center bg-neutral-950 px-3 py-1.5 rounded-xl border border-neutral-800">
           <div>
             <span className="text-xs font-medium text-neutral-300">Meia-Entrada</span>
-            <p className="text-[10px] text-neutral-500">R$ {(ticket.price / 2).toFixed(2)}</p>
+            <span className="text-[10px] text-neutral-500 ml-1">(R$ {(ticket.price / 2).toFixed(2)})</span>
           </div>
-          <div className="flex items-center gap-3 bg-neutral-900 rounded-lg p-1 border border-neutral-700">
-            <button onClick={() => handleQuantityChange(ticket, 'Meia', ticket.requires_shirt_size ? shirt : null, -1)} className="w-7 h-7 font-bold text-neutral-400 hover:text-white">−</button>
-            <span className="w-4 text-center font-bold text-xs">{selections[`${ticket.id}_Meia_${ticket.requires_shirt_size ? shirt : 'none'}`]?.quantity || 0}</span>
-            <button onClick={() => handleQuantityChange(ticket, 'Meia', ticket.requires_shirt_size ? shirt : null, 1)} className="w-7 h-7 font-bold text-emerald-400">+</button>
+          <div className="flex items-center gap-2 bg-neutral-900 rounded-lg p-0.5 border border-neutral-700">
+            <button onClick={() => handleQuantityChange(ticket, 'Meia', ticket.requires_shirt_size ? shirt : null, -1)} className="w-6 h-6 font-bold text-neutral-400 hover:text-white flex items-center justify-center">−</button>
+            <span className="w-4 text-center font-bold text-xs">{selections[ticket.id + '_Meia_' + (ticket.requires_shirt_size ? shirt : 'none')]?.quantity || 0}</span>
+            <button onClick={() => handleQuantityChange(ticket, 'Meia', ticket.requires_shirt_size ? shirt : null, 1)} className="w-6 h-6 font-bold text-emerald-400 flex items-center justify-center">+</button>
           </div>
         </div>
       )}
