@@ -149,7 +149,7 @@ export default function HomePage() {
                 const imageToDisplay = event.thumbnail_url || event.banner_url;
                 
                 return (
-                  <div key={event.id} className="group flex flex-col bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-500/5 transition-all duration-300">
+                  <div key={event.id} className="group flex flex-col bg-neutral-900/90 border-2 border-emerald-500/60 rounded-2xl overflow-hidden hover:border-emerald-400 hover:shadow-[0_0_30px_rgba(16,185,129,0.25)] transition-all duration-300">
                     
                     {/* Imagem do Card (Clicável) */}
                     <Link href={`/eventos/${event.id}`} className="h-48 bg-neutral-800 relative overflow-hidden block">
@@ -162,8 +162,8 @@ export default function HomePage() {
                         </div>
                       )}
                       
-                      {/* Badge da Categoria */}
-                      <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md border border-neutral-700/50 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg uppercase tracking-wider">
+                      {/* Badge da Categoria com Cor Vibrante */}
+                      <div className="absolute top-3 left-3 bg-emerald-500 text-black font-black text-[10px] px-3 py-1.5 rounded-lg uppercase tracking-wider shadow-lg">
                         {event.event_type || 'Evento'}
                       </div>
                       
@@ -199,12 +199,12 @@ export default function HomePage() {
                         </div>
                       </div>
 
-                      {/* Botão Ver Detalhes */}
+                      {/* Botão Ver Detalhes Destacado */}
                       <Link 
                         href={`/eventos/${event.id}`} 
-                        className="block w-full py-2.5 mt-6 text-center bg-neutral-800 hover:bg-emerald-500 text-white hover:text-black text-xs font-bold rounded-xl transition-colors shadow-md"
+                        className="block w-full py-3 mt-6 text-center bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-xl transition-all shadow-md shadow-emerald-500/20"
                       >
-                        Ver Detalhes
+                        Ver Detalhes →
                       </Link>
                     </div>
 
