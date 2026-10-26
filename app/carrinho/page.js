@@ -1,342 +1,208 @@
 'use client';
-
 import { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-export default function CarrinhoPage() {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
+
+export default function CartPage() {
   const router = useRouter();
-  const [cartData, setCartData] = useState(null);
-  
-  // Perfil simulado do utilizador logado
-  const loggedUser = {
-    fullName: 'Rafael Augusto Silva Barbosa',
-    email: 'kweventos00@gmail.com',
-    phone: '(47) 99953-4242',
-    cpf: '123.456.789-00'
-  };
-
-  const [targetPerson, setTargetPerson] = useState('self'); // 'self' ou 'other'
-
-  const [buyerData, setBuyerData] = useState({
-    fullName: loggedUser.fullName,
-    email: loggedUser.email,
-    confirmEmail: loggedUser.email,
-    phone: loggedUser.phone,
-    cpf: loggedUser.cpf,
-    city: '',
-    state: '',
-    gender: '',
-    ageGroup: '',
-    acceptTerms: false
-  });
+  const [cart, setCart] = useState(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [couponMessage, setCouponMessage] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const savedCart = localStorage.getItem('vipAcesso_cart');
     if (savedCart) {
-      setCartData(JSON.parse(savedCart));
+      setCart(JSON.parse(savedCart));
     }
   }, []);
 
-  const handleTargetChange = (type) => {
-    setTargetPerson(type);
-    if (type === 'self') {
-      setBuyerData(prev => ({
-        ...prev,
-        fullName: loggedUser.fullName,
-        email: loggedUser.email,
-        confirmEmail: loggedUser.email,
-        phone: loggedUser.phone,
-        cpf: loggedUser.cpf
-      }));
-    } else {
-      setBuyerData(prev => ({
-        ...prev,
-        fullName: '',
-        email: '',
-        confirmEmail: '',
-        phone: '',
-        cpf: '',
-        city: '',
-        state: '',
-        gender: '',
-        ageGroup: ''
-      }));
-    }
-  };
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setBuyerData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-  };
-
-  const handleCheckout = (e) => {
-    e.preventDefault();
-
-    if (buyerData.email !== buyerData.confirmEmail) {
-      alert('Os e-mails informados não coincidem. Por favor, verifique e confirme o e-mail corretamente.');
-      return;
-    }
-
-    if (!buyerData.acceptTerms) {
-      alert('É necessário aceitar os termos de uso de imagem e comunicação.');
-      return;
-    }
-
-    // Salva os dados do comprador no carrinho e vai para a página de pagamento/confirmação
-    const currentCart = JSON.parse(localStorage.getItem('vipAcesso_cart') || '{}');
-    localStorage.setItem('vipAcesso_cart', JSON.stringify({
-      ...currentCart,
-      buyer: buyerData
-    }));
-
-    router.push('/confirmacao/order-mock-id');
-  };
-
-  if (!cartData || !cartData.items || cartData.items.length === 0) {
+  if (!cart || !cart.items || cart.items.length === 0) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-6">
-        <h1 className="text-2xl font-bold mb-4">O carrinho está vazio</h1>
-        <Link href="/" className="px-6 py-3 bg-emerald-500 text-black font-bold rounded-xl text-sm">Ver Eventos</Link>
+      <div className="min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-6 font-sans">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="text-5xl">🛒</div>
+          <h1 className="text-2xl font-bold">O seu carrinho está vazio</h1>
+          <p className="text-neutral-400 text-sm">Ainda não adicionou nenhum ingresso ou produto da loja.</p>
+          <Link href="/" className="inline-block bg-emerald-500 text-black font-bold px-6 py-3 rounded-xl hover:bg-emerald-400 transition">
+            Explorar Eventos
+          </Link>
+        </div>
       </div>
     );
   }
 
-  const eventImage = cartData.event?.thumbnail_url || cartData.event?.banner_url;
+  const handleQuantityChange = (index, delta) => {
+    const updatedItems = [...cart.items];
+    updatedItems[index].quantity += delta;
+
+    if (updatedItems[index].quantity <= 0) {
+      updatedItems.splice(index, 1);
+    }
+
+    const newTotal = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const updatedCart = { ...cart, items: updatedItems, total: newTotal };
+    
+    setCart(updatedCart);
+    localStorage.setItem('vipAcesso_cart', JSON.stringify(updatedCart));
+  };
+
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setLoading(true);
+    setCouponMessage(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('code', couponCode.trim().toUpperCase())
+        .single();
+
+      if (error || !data) {
+        setCouponMessage({ text: 'Cupão inválido ou expirado.', type: 'error' });
+        setDiscount(0);
+      } else {
+        // Exemplo de desconto percentual ou fixo
+        const discValue = data.discount_percent ? (cart.total * data.discount_percent) / 100 : (data.discount_amount || 0);
+        setDiscount(discValue);
+        setCouponMessage({ text: `Cupão aplicado com sucesso! Desconto de ${data.discount_percent ? data.discount_percent + '%' : 'R$ ' + discValue}`, type: 'success' });
+      }
+    } catch (err) {
+      console.error('Erro ao aplicar cupão:', err);
+      setCouponMessage({ text: 'Erro ao validar o cupão.', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const finalTotal = Math.max(0, cart.total - discount);
+
+  const proceedToCheckout = () => {
+    // Atualiza o carrinho com o valor final com desconto e avança para pagamento
+    const finalCart = { ...cart, discount, finalTotal };
+    localStorage.setItem('vipAcesso_cart', JSON.stringify(finalCart));
+    router.push('/checkout');
+  };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white pb-20 font-sans">
-      <header className="h-20 border-b border-neutral-800 bg-neutral-900/90 backdrop-blur-md sticky top-0 z-50 flex items-center px-6 lg:px-10 justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          <span className="bg-emerald-500 text-black font-black px-3 py-1.5 rounded-xl text-lg shadow-lg shadow-emerald-500/20">VA</span>
-          <span className="font-bold tracking-wide">VipAcesso - Checkout</span>
-        </Link>
+    <div className="min-h-screen bg-neutral-950 text-white font-sans flex flex-col justify-between">
+      <header className="border-b border-neutral-800 bg-neutral-900/85 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <span className="bg-emerald-500 text-black font-black px-3 py-1.5 rounded-xl text-lg">VA</span>
+            <span className="font-bold">VipAcesso</span>
+          </Link>
+          <span className="text-xs text-neutral-400 font-medium">Checkout Seguro</span>
+        </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 mt-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        <div className="lg:col-span-2 space-y-8">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 lg:p-8 space-y-6 shadow-xl">
-            <h2 className="text-lg font-bold border-b border-neutral-800 pb-4">Dados do Participante</h2>
-            
-            {/* Seletor "Eu mesmo" ou "Outra pessoa" */}
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => handleTargetChange('self')}
-                className={`py-3 px-4 rounded-xl font-bold text-sm border transition-all ${targetPerson === 'self' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}
-              >
-                👤 Inscrição para Mim Mesmo
-              </button>
-              <button
-                type="button"
-                onClick={() => handleTargetChange('other')}
-                className={`py-3 px-4 rounded-xl font-bold text-sm border transition-all ${targetPerson === 'other' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}
-              >
-                👥 Inscrição para Outra Pessoa
-              </button>
-            </div>
+      <main className="max-w-4xl mx-auto px-6 py-12 w-full flex-1">
+        <h1 className="text-3xl font-extrabold mb-8">Resumo da Inscrição</h1>
 
-            <form id="checkout-form" onSubmit={handleCheckout} className="space-y-4 pt-2">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Nome Completo *</label>
-                <input 
-                  type="text" 
-                  name="fullName"
-                  value={buyerData.fullName}
-                  onChange={handleChange}
-                  placeholder="Nome completo do participante"
-                  className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all"
-                  required
-                />
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* ITENS DO CARRINHO */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-6">
+              <h2 className="text-sm font-bold text-neutral-400 uppercase tracking-widest">Itens Selecionados</h2>
+              
+              <div className="divide-y divide-neutral-800">
+                {cart.items.map((item, idx) => (
+                  <div key={idx} className="py-4 first:pt-0 last:pb-0 flex items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-sm text-white truncate">{item.name}</h3>
+                      <p className="text-emerald-400 text-xs font-semibold mt-0.5">
+                        {Number(item.price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} un.
+                      </p>
+                    </div>
 
-              {/* E-mail e Confirmação de E-mail */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">E-mail *</label>
-                  <input 
-                    type="email" 
-                    name="email"
-                    value={buyerData.email}
-                    onChange={handleChange}
-                    placeholder="seu@email.com"
-                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Confirmar E-mail *</label>
-                  <input 
-                    type="email" 
-                    name="confirmEmail"
-                    value={buyerData.confirmEmail}
-                    onChange={handleChange}
-                    placeholder="Confirme o seu e-mail"
-                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Telefone e CPF */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Telefone / WhatsApp *</label>
-                  <input 
-                    type="text" 
-                    name="phone"
-                    value={buyerData.phone}
-                    onChange={handleChange}
-                    placeholder="(00) 00000-0000"
-                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">CPF *</label>
-                  <input 
-                    type="text" 
-                    name="cpf"
-                    value={buyerData.cpf}
-                    onChange={handleChange}
-                    placeholder="000.000.000-00"
-                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Cidade e Estado */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Cidade *</label>
-                  <input 
-                    type="text" 
-                    name="city"
-                    value={buyerData.city}
-                    onChange={handleChange}
-                    placeholder="Ex: Itapema"
-                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Estado *</label>
-                  <input 
-                    type="text" 
-                    name="state"
-                    value={buyerData.state}
-                    onChange={handleChange}
-                    placeholder="Ex: SC"
-                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Género e Faixa Etária */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Género *</label>
-                  <select
-                    name="gender"
-                    value={buyerData.gender}
-                    onChange={handleChange}
-                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all"
-                    required
-                  >
-                    <option value="">Selecione...</option>
-                    <option value="Masculino">Masculino</option>
-                    <option value="Feminino">Feminino</option>
-                    <option value="Prefiro não informar">Prefiro não informar</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Faixa Etária *</label>
-                  <select
-                    name="ageGroup"
-                    value={buyerData.ageGroup}
-                    onChange={handleChange}
-                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all"
-                    required
-                  >
-                    <option value="">Selecione...</option>
-                    <option value="Até 17 anos">Até 17 anos</option>
-                    <option value="18 a 24 anos">18 a 24 anos</option>
-                    <option value="25 a 34 anos">25 a 34 anos</option>
-                    <option value="35 a 44 anos">35 a 44 anos</option>
-                    <option value="45 a 59 anos">45 a 59 anos</option>
-                    <option value="60 ou mais">60 ou mais</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Termos */}
-              <div className="pt-4 border-t border-neutral-800">
-                <label className="flex items-start gap-3 cursor-pointer p-4 bg-neutral-950 rounded-xl border border-neutral-800 hover:border-neutral-700 transition-colors">
-                  <input 
-                    type="checkbox" 
-                    name="acceptTerms"
-                    checked={buyerData.acceptTerms}
-                    onChange={handleChange}
-                    className="w-5 h-5 accent-emerald-500 mt-0.5 cursor-pointer"
-                    required 
-                  />
-                  <div className="text-sm">
-                    <span className="font-semibold text-white">Aceito os Termos de Uso de Imagem e Comunicação</span>
-                    <p className="text-xs text-neutral-400 mt-1">
-                      {cartData.event.image_terms || "Autorizo a captação e utilização de minha imagem em fotos e vídeos oficiais do evento."}
-                    </p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 bg-neutral-950 rounded-lg p-1 border border-neutral-800">
+                        <button type="button" onClick={() => handleQuantityChange(idx, -1)} className="w-6 h-6 font-bold text-neutral-400 hover:text-white">−</button>
+                        <span className="w-4 text-center font-bold text-xs">{item.quantity}</span>
+                        <button type="button" onClick={() => handleQuantityChange(idx, 1)} className="w-6 h-6 font-bold text-emerald-400">+</button>
+                      </div>
+                      <span className="text-sm font-bold w-20 text-right">
+                        {(item.price * item.quantity).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </span>
+                    </div>
                   </div>
-                </label>
+                ))}
               </div>
-            </form>
+            </div>
           </div>
-        </div>
 
-        {/* Resumo da Inscrição com Mini-Card do Evento */}
-        <div>
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 sticky top-28 space-y-6 shadow-xl">
-            <h3 className="text-lg font-bold border-b border-neutral-800 pb-3">Resumo da Inscrição</h3>
-            
-            {/* Mini Card do Evento */}
-            <div className="space-y-3">
-              <div className="h-36 bg-neutral-800 rounded-xl overflow-hidden relative border border-neutral-800 shadow-md">
-                {eventImage ? (
-                  <img src={eventImage} alt={cartData.event.title} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-neutral-600 text-xs font-bold uppercase tracking-widest">Sem Imagem</div>
+          {/* SUMÁRIO E CUPÃO */}
+          <div className="space-y-6">
+            <div className="bg-neutral-900 border border-emerald-500/50 rounded-2xl p-6 space-y-5 shadow-xl">
+              <h2 className="text-sm font-bold border-b border-neutral-800 pb-3">Resumo do Pedido</h2>
+              
+              {/* CUPÃO DE DESCONTO */}
+              <div className="space-y-2">
+                <label className="text-xs text-neutral-400 font-medium">Possui cupão de desconto?</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    placeholder="CÓDIGO" 
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    className="bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white uppercase flex-1 focus:outline-none focus:border-emerald-500"
+                  />
+                  <button 
+                    type="button"
+                    onClick={applyCoupon}
+                    disabled={loading}
+                    className="bg-neutral-800 hover:bg-neutral-700 text-xs font-bold px-4 py-2 rounded-xl transition"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+                {couponMessage && (
+                  <p className={`text-[11px] font-medium ${couponMessage.type === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {couponMessage.text}
+                  </p>
                 )}
-                <div className="absolute top-2.5 left-2.5 bg-emerald-500 text-black font-black text-[9px] px-2.5 py-1 rounded-md uppercase tracking-wider shadow-md">
-                  {cartData.event.event_type || 'Evento'}
+              </div>
+
+              <div className="space-y-2 pt-4 border-t border-neutral-800 text-sm">
+                <div className="flex justify-between text-neutral-400">
+                  <span>Subtotal</span>
+                  <span>{cart.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-emerald-400">
+                    <span>Desconto</span>
+                    <span>- {discount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-lg font-black text-white pt-2 border-t border-neutral-800">
+                  <span>Total</span>
+                  <span>{finalTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                 </div>
               </div>
-              <h4 className="font-bold text-white text-base leading-snug">{cartData.event.title}</h4>
-            </div>
 
-            <div className="space-y-3 pt-2 text-sm border-t border-neutral-800">
-              {cartData.items.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center border-b border-neutral-800/60 pb-2.5">
-                  <span className="text-neutral-300">{item.quantity}x {item.name}</span>
-                  <span className="font-bold">{(item.price * item.quantity).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="pt-4 border-t border-neutral-700 space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-neutral-400">Total</span>
-                <span className="text-2xl font-black text-emerald-400">{cartData.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-              </div>
-              <button type="submit" form="checkout-form" className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-black rounded-xl text-base transition-all shadow-lg shadow-emerald-500/20 text-center">
-                Finalizar Inscrição
+              <button 
+                type="button"
+                onClick={proceedToCheckout}
+                className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3.5 rounded-xl transition shadow-lg shadow-emerald-500/20 text-sm"
+              >
+                Avançar para Pagamento
               </button>
             </div>
           </div>
         </div>
-
       </main>
+
+      <footer className="border-t border-neutral-800 bg-neutral-900 mt-20 py-8 px-6 text-center text-neutral-500 text-sm">
+        <p>© {new Date().getFullYear()} VipAcesso - Todos os direitos reservados.</p>
+      </footer>
     </div>
   );
 }
