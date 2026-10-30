@@ -13,9 +13,14 @@ export default function HomePage() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Estados para gerir a autenticação no Header
+  const [user, setUser] = useState(null);
+  const [userName, setUserName] = useState('');
 
   useEffect(() => {
-    async function fetchEvents() {
+    async function fetchData() {
+      // 1. Buscar Eventos
       const { data, error } = await supabase
         .from('events')
         .select('*')
@@ -26,10 +31,34 @@ export default function HomePage() {
       } else {
         setEvents(data || []);
       }
+
+      // 2. Verificar Sessão do Utilizador Logado
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUser(user);
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, company_name')
+          .eq('id', user.id)
+          .single();
+
+        if (profile) {
+          setUserName(profile.full_name || profile.company_name || user.email.split('@')[0]);
+        } else {
+          setUserName(user.email.split('@')[0]);
+        }
+      }
+
       setLoading(false);
     }
-    fetchEvents();
+    fetchData();
   }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    window.location.reload();
+  };
 
   // Lógica de filtragem
   const filteredEvents = events.filter((event) => {
@@ -43,16 +72,37 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex flex-col font-sans">
       
-      {/* CABEÇALHO / HEADER */}
+      {/* CABEÇALHO / HEADER DINÂMICO */}
       <header className="h-20 border-b border-neutral-800 bg-neutral-900/90 backdrop-blur-md flex items-center justify-between px-6 lg:px-10 sticky top-0 z-50 transition-all">
         <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <span className="bg-emerald-500 text-black font-black px-3 py-1.5 rounded-xl text-lg shadow-lg shadow-emerald-500/20">VA</span>
           <span className="font-bold text-lg hidden sm:block tracking-wide">VipAcesso</span>
         </Link>
+        
         <div className="flex items-center gap-4">
-          <Link href="/login" className="text-sm font-semibold text-neutral-300 hover:text-emerald-400 transition-colors px-4 py-2">
-            Entrar
-          </Link>
+          {user ? (
+            /* SE ESTIVER LOGADO: Mostra identificação e atalho para os bilhetes */
+            <div className="flex items-center gap-3">
+              <Link 
+                href="/meus-ingressos" 
+                className="text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-4 py-2.5 rounded-xl hover:bg-emerald-500/20 transition-colors"
+              >
+                🎟️ Olá, {userName}
+              </Link>
+              <button 
+                onClick={handleLogout}
+                className="text-xs font-semibold text-neutral-400 hover:text-white px-3 py-2.5 bg-neutral-800 hover:bg-neutral-700 rounded-xl transition-colors"
+              >
+                Sair
+              </button>
+            </div>
+          ) : (
+            /* SE NÃO ESTIVER LOGADO: Mostra botão Entrar */
+            <Link href="/login" className="text-sm font-semibold text-neutral-300 hover:text-emerald-400 transition-colors px-4 py-2">
+              Entrar
+            </Link>
+          )}
+
           <Link href="/produtor/login" className="text-sm font-bold bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 px-5 py-2.5 rounded-xl transition-all shadow-md">
             Área do Produtor
           </Link>
@@ -262,7 +312,7 @@ export default function HomePage() {
             <div>
               <h4 className="font-bold mb-4 text-sm uppercase tracking-wider text-neutral-300">Para Participantes</h4>
               <ul className="space-y-3 text-sm text-neutral-500">
-                <li><Link href="/login" className="hover:text-emerald-400 transition-colors">Meus Ingressos</Link></li>
+                <li><Link href="/meus-ingressos" className="hover:text-emerald-400 transition-colors">Meus Ingressos</Link></li>
                 <li><Link href="#" className="hover:text-emerald-400 transition-colors">Como Comprar</Link></li>
                 <li><Link href="#" className="hover:text-emerald-400 transition-colors">Dúvidas Frequentes</Link></li>
                 <li><Link href="#" className="hover:text-emerald-400 transition-colors">Política de Reembolso</Link></li>
@@ -291,14 +341,6 @@ export default function HomePage() {
                 <li className="flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
                   +351 912 345 678
-                </li>
-                <li className="flex items-center gap-2 mt-4 pt-4 border-t border-neutral-800">
-                  <Link href="#" className="w-8 h-8 bg-neutral-900 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-black transition-colors">
-                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-                  </Link>
-                  <Link href="#" className="w-8 h-8 bg-neutral-900 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-black transition-colors">
-                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg>
-                  </Link>
                 </li>
               </ul>
             </div>

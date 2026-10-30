@@ -4,8 +4,17 @@ import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
+
 function TicketItem({ ticket, selections, handleQuantityChange }) {
-  const [shirt, setShirt] = useState(ticket.requires_shirt_size ? 'M' : '');
+  const keyInteira = ticket.id + '_Inteira_none';
+  const keyMeia = ticket.id + '_Meia_none';
+
+  const qtyInteira = selections[keyInteira]?.quantity || 0;
+  const qtyMeia = selections[keyMeia]?.quantity || 0;
 
   return (
     <div className="pb-3 border-b border-neutral-800/80 last:border-0 space-y-2">
@@ -25,15 +34,15 @@ function TicketItem({ ticket, selections, handleQuantityChange }) {
         <div className="flex items-center gap-2 bg-neutral-900 rounded-lg p-0.5 border border-neutral-800">
           <button 
             type="button"
-            onClick={() => handleQuantityChange(ticket, 'Inteira', ticket.requires_shirt_size ? shirt : null, -1)}
+            onClick={() => handleQuantityChange(ticket, 'Inteira', null, -1)}
             className="w-6 h-6 flex items-center justify-center text-neutral-400 hover:text-white"
           >-</button>
-          <span className="w-4 text-center font-bold text-xs">
-            {selections[ticket.id + '_Inteira_' + (ticket.requires_shirt_size ? shirt : '')]?.quantity || 0}
+          <span className="w-4 text-center font-bold text-xs text-white">
+            {qtyInteira}
           </span>
           <button 
             type="button"
-            onClick={() => handleQuantityChange(ticket, 'Inteira', ticket.requires_shirt_size ? shirt : null, 1)}
+            onClick={() => handleQuantityChange(ticket, 'Inteira', null, 1)}
             className="w-6 h-6 flex items-center justify-center text-neutral-400 hover:text-white"
           >+</button>
         </div>
@@ -48,15 +57,15 @@ function TicketItem({ ticket, selections, handleQuantityChange }) {
           <div className="flex items-center gap-2 bg-neutral-900 rounded-lg p-0.5 border border-neutral-800">
             <button 
               type="button"
-              onClick={() => handleQuantityChange(ticket, 'Meia', ticket.requires_shirt_size ? shirt : null, -1)}
+              onClick={() => handleQuantityChange(ticket, 'Meia', null, -1)}
               className="w-6 h-6 flex items-center justify-center text-neutral-400 hover:text-white"
             >-</button>
-            <span className="w-4 text-center font-bold text-xs">
-              {selections[ticket.id + '_Meia_' + (ticket.requires_shirt_size ? shirt : '')]?.quantity || 0}
+            <span className="w-4 text-center font-bold text-xs text-white">
+              {qtyMeia}
             </span>
             <button 
               type="button"
-              onClick={() => handleQuantityChange(ticket, 'Meia', ticket.requires_shirt_size ? shirt : null, 1)}
+              onClick={() => handleQuantityChange(ticket, 'Meia', null, 1)}
               className="w-6 h-6 flex items-center justify-center text-neutral-400 hover:text-white"
             >+</button>
           </div>
@@ -65,11 +74,6 @@ function TicketItem({ ticket, selections, handleQuantityChange }) {
     </div>
   );
 }
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
 
 function EventContent() {
   const { id } = useParams();
@@ -82,6 +86,10 @@ function EventContent() {
   const [expandedDesc, setExpandedDesc] = useState(false);
   const [expandedRules, setExpandedRules] = useState(false);
   const [selections, setSelections] = useState({});
+
+  // Estados para gerir a autenticação no Header
+  const [user, setUser] = useState(null);
+  const [userName, setUserName] = useState('');
 
   const handleProductQuantityChange = (product, delta) => {
     setProductSelections(prev => {
@@ -104,6 +112,7 @@ function EventContent() {
       if (!id) return;
       
       try {
+        // 1. Buscar Dados do Evento e Ingressos/Produtos
         const eventRes = await supabase.from('events').select('*').eq('id', id).single();
         
         if (eventRes.data) {
@@ -118,6 +127,24 @@ function EventContent() {
           if (ticketsRes.data) setTicketsData(ticketsRes.data);
           if (productsRes.data) setProductsData(productsRes.data);
         }
+
+        // 2. Verificar Sessão do Utilizador Logado
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUser(user);
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, company_name')
+            .eq('id', user.id)
+            .single();
+
+          if (profile) {
+            setUserName(profile.full_name || profile.company_name || user.email.split('@')[0]);
+          } else {
+            setUserName(user.email.split('@')[0]);
+          }
+        }
+
       } catch (err) {
         console.error("Erro ao carregar dados:", err);
       } finally {
@@ -128,10 +155,16 @@ function EventContent() {
     fetchData();
   }, [id]);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    window.location.reload();
+  };
+
   const handleQuantityChange = (ticket, type, shirtSize, delta) => {
-    const key = ticket.id + '_' + type + '_' + (shirtSize || 'none');
+    const key = ticket.id + '_' + type + '_none';
     setSelections(prev => {
-      const currentObj = prev[key] || { quantity: 0, ticket, type, shirtSize };
+      const currentObj = prev[key] || { quantity: 0, ticket, type, shirtSize: null };
       const newQty = Math.max(0, currentObj.quantity + delta);
       
       if (delta > 0 && totalSelectedForTicket(ticket.id) >= ticket.quantity) {
@@ -166,12 +199,12 @@ function EventContent() {
 
   const handleContinuar = () => {
     const cartItems = Object.values(selections).map(item => ({
-      id: item.ticket.id + '_' + item.type + '_' + (item.shirtSize || 'none'),
+      id: item.ticket.id + '_' + item.type + '_none',
       ticket_id: item.ticket.id,
-      name: item.ticket.name + ' (' + item.type + ')' + (item.shirtSize ? ' - Camisa: ' + item.shirtSize : ''),
+      name: item.ticket.name + ' (' + item.type + ')',
       price: item.type === 'Meia' ? item.ticket.price / 2 : item.ticket.price,
       quantity: item.quantity,
-      shirtSize: item.shirtSize || null,
+      shirtSize: null,
       type: item.type
     }));
 
@@ -197,15 +230,39 @@ function EventContent() {
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex flex-col justify-between font-sans">
       <div>
-        {/* CABEÇALHO */}
+        {/* CABEÇALHO DINÂMICO */}
         <header className="border-b border-neutral-800 bg-neutral-900/85 backdrop-blur-md sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-3">
               <span className="bg-emerald-500 text-black font-black px-3 py-1.5 rounded-xl text-lg">VA</span>
               <span className="font-bold">VipAcesso</span>
             </Link>
-            <div className="p-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-sm font-medium flex items-center gap-2">
-              🛒 <span>{subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+
+            <div className="flex items-center gap-4">
+              {user ? (
+                <div className="flex items-center gap-3">
+                  <Link 
+                    href="/meus-ingressos" 
+                    className="text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-4 py-2.5 rounded-xl hover:bg-emerald-500/20 transition-colors"
+                  >
+                    🎟️ Olá, {userName}
+                  </Link>
+                  <button 
+                    onClick={handleLogout}
+                    className="text-xs font-semibold text-neutral-400 hover:text-white px-3 py-2.5 bg-neutral-800 hover:bg-neutral-700 rounded-xl transition-colors"
+                  >
+                    Sair
+                  </button>
+                </div>
+              ) : (
+                <Link href="/login" className="text-sm font-semibold text-neutral-300 hover:text-emerald-400 transition-colors px-4 py-2">
+                  Entrar
+                </Link>
+              )}
+
+              <div className="p-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-sm font-medium flex items-center gap-2">
+                🛒 <span>{subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+              </div>
             </div>
           </div>
         </header>

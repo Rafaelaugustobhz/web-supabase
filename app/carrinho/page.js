@@ -39,13 +39,28 @@ export default function CartPage() {
     );
   }
 
+  // Impede que a quantidade baixe de 1 pelo botão menos
   const handleQuantityChange = (index, delta) => {
     const updatedItems = [...cart.items];
-    updatedItems[index].quantity += delta;
+    const newQty = updatedItems[index].quantity + delta;
 
-    if (updatedItems[index].quantity <= 0) {
-      updatedItems.splice(index, 1);
+    if (newQty < 1) {
+      return; // Mantém no mínimo 1
     }
+
+    updatedItems[index].quantity = newQty;
+
+    const newTotal = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const updatedCart = { ...cart, items: updatedItems, total: newTotal };
+    
+    setCart(updatedCart);
+    localStorage.setItem('vipAcesso_cart', JSON.stringify(updatedCart));
+  };
+
+  // Função dedicada para remover o item se o utilizador clicar no botão de fechar (✕)
+  const handleRemoveItem = (index) => {
+    const updatedItems = [...cart.items];
+    updatedItems.splice(index, 1);
 
     const newTotal = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const updatedCart = { ...cart, items: updatedItems, total: newTotal };
@@ -70,7 +85,6 @@ export default function CartPage() {
         setCouponMessage({ text: 'Cupão inválido ou expirado.', type: 'error' });
         setDiscount(0);
       } else {
-        // Exemplo de desconto percentual ou fixo
         const discValue = data.discount_percent ? (cart.total * data.discount_percent) / 100 : (data.discount_amount || 0);
         setDiscount(discValue);
         setCouponMessage({ text: `Cupão aplicado com sucesso! Desconto de ${data.discount_percent ? data.discount_percent + '%' : 'R$ ' + discValue}`, type: 'success' });
@@ -86,7 +100,6 @@ export default function CartPage() {
   const finalTotal = Math.max(0, cart.total - discount);
 
   const proceedToCheckout = () => {
-    // Atualiza o carrinho com o valor final com desconto e avança para pagamento
     const finalCart = { ...cart, discount, finalTotal };
     localStorage.setItem('vipAcesso_cart', JSON.stringify(finalCart));
     router.push('/checkout');
@@ -124,14 +137,26 @@ export default function CartPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
+                      {/* Controlo de Quantidade (Mínimo 1) */}
                       <div className="flex items-center gap-2 bg-neutral-950 rounded-lg p-1 border border-neutral-800">
-                        <button type="button" onClick={() => handleQuantityChange(idx, -1)} className="w-6 h-6 font-bold text-neutral-400 hover:text-white">−</button>
+                        <button type="button" onClick={() => handleQuantityChange(idx, -1)} className="w-6 h-6 font-bold text-neutral-400 hover:text-white flex items-center justify-center">−</button>
                         <span className="w-4 text-center font-bold text-xs">{item.quantity}</span>
-                        <button type="button" onClick={() => handleQuantityChange(idx, 1)} className="w-6 h-6 font-bold text-emerald-400">+</button>
+                        <button type="button" onClick={() => handleQuantityChange(idx, 1)} className="w-6 h-6 font-bold text-emerald-400 flex items-center justify-center">+</button>
                       </div>
+
                       <span className="text-sm font-bold w-20 text-right">
                         {(item.price * item.quantity).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </span>
+
+                      {/* Botão Dedicado para Remover o Item */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleRemoveItem(idx)}
+                        className="text-neutral-500 hover:text-red-400 p-1 transition-colors text-xs font-bold"
+                        title="Remover item"
+                      >
+                        ✕
+                      </button>
                     </div>
                   </div>
                 ))}

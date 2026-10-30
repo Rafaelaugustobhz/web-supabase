@@ -40,32 +40,37 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      // Grava o pedido na tabela orders do Supabase
-      const { data, error } = await supabase.from('orders').insert([
-        {
-          event_id: cart.event?.id || null,
-          buyer_name: formData.fullName,
-          buyer_email: formData.email,
-          buyer_phone: formData.phone,   // <--- Alterado para buyer_phone
-          buyer_cpf: formData.cpf,       // <--- Alterado para buyer_cpf
-          payment_method: formData.paymentMethod,
-          total_amount: cart.finalTotal !== undefined ? cart.finalTotal : cart.total,
-          discount_amount: cart.discount || 0,
-          items: cart.items,
-          status: 'pending'
-        }
-      ]).select();
+      const orderPayload = {
+        event_id: cart.event?.id || null,
+        buyer_name: formData.fullName,
+        buyer_email: formData.email,
+        buyer_phone: formData.phone || '',
+        buyer_cpf: formData.cpf || '',
+        payment_method: formData.paymentMethod || 'pix',
+        total_amount: cart.finalTotal !== undefined ? cart.finalTotal : cart.total,
+        discount_amount: cart.discount || 0,
+        items: cart.items,
+        status: 'confirmed'
+      };
 
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('orders')
+        .insert([orderPayload])
+        .select();
 
-      // Limpa o carrinho e redireciona para a página de sucesso
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error);
+        alert('Erro ao guardar pedido: ' + error.message);
+        setLoading(false);
+        return;
+      }
+
       localStorage.removeItem('vipAcesso_cart');
       const orderId = data && data[0] ? data[0].id : '123';
       router.push(`/sucesso?orderId=${orderId}`);
     } catch (err) {
-      console.error('Erro ao finalizar pedido:', err);
-      alert('Ocorreu um erro ao processar o seu pedido. Tente novamente.');
-    } finally {
+      console.error('Erro crítico no checkout:', err);
+      alert('Ocorreu um erro inesperado ao processar o pagamento.');
       setLoading(false);
     }
   };

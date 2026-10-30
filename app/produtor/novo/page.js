@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
@@ -13,12 +13,14 @@ const supabase = createClient(
 export default function NovoEvento() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userId, setUserId] = useState(null);
   
-  const producerData = {
-    nome: 'KW Eventos',
-    email: 'kweventos00@gmail.com',
-    telefone: '(47) 99953-4242'
-  };
+  // Estado para armazenar os dados dinâmicos do produtor (empresa, email, telefone)
+  const [producerData, setProducerData] = useState({
+    nome: '',
+    email: '',
+    telefone: ''
+  });
 
   const [formData, setFormData] = useState({
     title: '',
@@ -31,12 +33,39 @@ export default function NovoEvento() {
     bannerUrl: '',
     documentUrl: '',
     batchName: '1º Lote',
-    maxInstallments: '12' // <--- Adicionado aqui
+    maxInstallments: '12' 
   });
 
   const [tickets, setTickets] = useState([
     { id: 1, name: 'Ingresso Padrão', price: '', quantity: 100, hasHalfPrice: false, requiresShirtSize: false }
   ]);
+
+  // VERIFICA SESSÃO E CARREGA DADOS REAIS DO PRODUTOR
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/produtor/login');
+        return;
+      }
+      setUserId(user.id);
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile) {
+        setProducerData({
+          nome: profile.company_name || profile.full_name || 'Produtor Independente',
+          email: profile.email,
+          telefone: profile.phone || ''
+        });
+      }
+    };
+    fetchUser();
+  }, [router]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -49,13 +78,19 @@ export default function NovoEvento() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!userId) {
+      alert('Autenticação inválida. Faça login novamente.');
+      return;
+    }
+    
     setIsSubmitting(true);
     const isOnline = formData.eventType === 'online';
 
-    // 1. Criar Evento
+    // 1. Criar Evento com user_id
     const { data: newEvent, error: eventError } = await supabase
       .from('events')
       .insert([{
+        user_id: userId, // Vínculo crucial para Multi-tenant
         title: formData.title,
         description: formData.description,
         event_date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
@@ -70,7 +105,7 @@ export default function NovoEvento() {
         document_url: formData.documentUrl,
         batch_name: formData.batchName,
         is_sold_out: false,
-        max_installments: formData.maxInstallments // <--- Adicionado aqui no envio
+        max_installments: formData.maxInstallments 
       }])
       .select()
       .single();
@@ -101,7 +136,7 @@ export default function NovoEvento() {
 
     setIsSubmitting(false);
     alert('Evento e ingressos publicados com sucesso!');
-    router.push('/admin');
+    router.push('/produtor'); // Redireciona para /produtor em vez de /admin
   };
 
   const isOnline = formData.eventType === 'online';
@@ -112,10 +147,10 @@ export default function NovoEvento() {
       {/* CABEÇALHO */}
       <header className="h-20 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-md sticky top-0 z-50 flex items-center px-6 lg:px-10 justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/admin" className="w-10 h-10 bg-neutral-800 hover:bg-neutral-700 rounded-xl flex items-center justify-center transition-colors">←</Link>
+          <Link href="/produtor" className="w-10 h-10 bg-neutral-800 hover:bg-neutral-700 rounded-xl flex items-center justify-center transition-colors">←</Link>
           <h1 className="text-xl font-bold">Criar Novo Evento</h1>
         </div>
-        <button onClick={handleSubmit} disabled={isSubmitting} className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/20">
+        <button onClick={handleSubmit} disabled={isSubmitting || !userId} className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50">
           {isSubmitting ? 'A guardar...' : 'Publicar Evento'}
         </button>
       </header>
