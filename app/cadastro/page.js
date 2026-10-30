@@ -15,15 +15,15 @@ function CadastroContent() {
   const searchParams = useSearchParams();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [role, setRole] = useState('user');
+  const [role, setRole] = useState('customer'); // Usamos 'customer' para alinhar com o enum do Supabase
 
-  // Atualiza o tipo de conta automaticamente com base no URL (?role=producer)
+  // Atualiza o tipo de conta automaticamente com base no URL (?role=producer ou ?type=producer)
   useEffect(() => {
-    const roleParam = searchParams.get('role');
+    const roleParam = searchParams.get('role') || searchParams.get('type');
     if (roleParam === 'producer') {
       setRole('producer');
     } else {
-      setRole('user');
+      setRole('customer');
     }
   }, [searchParams]);
 
@@ -78,9 +78,9 @@ function CadastroContent() {
 
     alert('Conta criada com sucesso!');
     if (role === 'producer') {
-      router.push('/admin');
+      router.push('/produtor/login');
     } else {
-      router.push('/');
+      router.push('/login');
     }
   };
 
@@ -97,7 +97,7 @@ function CadastroContent() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white flex flex-col justify-between">
+    <div className="min-h-screen bg-neutral-950 text-white flex flex-col justify-between font-sans">
       <header className="h-20 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-md flex items-center px-6 lg:px-10">
         <Link href="/" className="flex items-center gap-3">
           <span className="bg-emerald-500 text-black font-black px-3 py-1.5 rounded-xl text-lg">VA</span>
@@ -119,8 +119,8 @@ function CadastroContent() {
           <div className="grid grid-cols-2 gap-2 bg-neutral-950 p-1.5 rounded-2xl border border-neutral-800">
             <button
               type="button"
-              onClick={() => setRole('user')}
-              className={`py-2.5 text-xs font-bold rounded-xl transition-all ${role === 'user' ? 'bg-emerald-500 text-black shadow-md' : 'text-neutral-400 hover:text-white'}`}
+              onClick={() => setRole('customer')}
+              className={`py-2.5 text-xs font-bold rounded-xl transition-all ${role === 'customer' ? 'bg-emerald-500 text-black shadow-md' : 'text-neutral-400 hover:text-white'}`}
             >
               👤 Participante
             </button>
@@ -133,26 +133,30 @@ function CadastroContent() {
             </button>
           </div>
 
-          {/* BOTÃO GOOGLE LOGIN */}
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="w-full py-3 bg-neutral-950 hover:bg-neutral-800 border border-neutral-800 text-white font-semibold rounded-xl text-sm flex items-center justify-center gap-3 transition-colors"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
-              <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.1 8.9 5 12 5z"/>
-              <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
-              <path fill="#FBBC05" d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.7s.2-2 .4-2.7L1.6 6.4C.6 8.4 0 10.6 0 13s.6 4.6 1.6 6.6l3.7-2.9z"/>
-              <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.1-6.7-5.3L1.6 15.6C3.5 19.4 7.4 22 12 22z"/>
-            </svg>
-            Continuar com o Google
-          </button>
+          {/* BOTÃO GOOGLE LOGIN (EXIBIDO APENAS PARA PARTICIPANTE) */}
+          {role === 'customer' && (
+            <>
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                className="w-full py-3 bg-neutral-950 hover:bg-neutral-800 border border-neutral-800 text-white font-semibold rounded-xl text-sm flex items-center justify-center gap-3 transition-colors"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.1 8.9 5 12 5z"/>
+                  <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
+                  <path fill="#FBBC05" d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.7s.2-2 .4-2.7L1.6 6.4C.6 8.4 0 10.6 0 13s.6 4.6 1.6 6.6l3.7-2.9z"/>
+                  <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.1-6.7-5.3L1.6 15.6C3.5 19.4 7.4 22 12 22z"/>
+                </svg>
+                Continuar com o Google
+              </button>
 
-          <div className="flex items-center gap-4 text-xs text-neutral-600 uppercase tracking-widest">
-            <div className="h-px bg-neutral-800 flex-1"></div>
-            ou por e-mail
-            <div className="h-px bg-neutral-800 flex-1"></div>
-          </div>
+              <div className="flex items-center gap-4 text-xs text-neutral-600 uppercase tracking-widest">
+                <div className="h-px bg-neutral-800 flex-1"></div>
+                ou por e-mail
+                <div className="h-px bg-neutral-800 flex-1"></div>
+              </div>
+            </>
+          )}
 
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -211,7 +215,7 @@ function CadastroContent() {
 
             {/* CAMPOS ESPECÍFICOS PARA PRODUTORES */}
             {role === 'producer' && (
-              <div className="space-y-4 pt-4 border-t border-neutral-800 animate-fadeIn">
+              <div className="space-y-4 pt-4 border-t border-neutral-800">
                 <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Dados Empresariais e de Contato (Exibidos no Evento)</p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -275,14 +279,20 @@ function CadastroContent() {
             <button 
               type="submit" 
               disabled={isSubmitting}
-              className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/20 mt-4"
+              className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/20 mt-4 disabled:opacity-50"
             >
               {isSubmitting ? 'A criar conta...' : 'Registar Conta'}
             </button>
           </form>
 
           <div className="text-center pt-4 border-t border-neutral-800 text-xs text-neutral-400">
-            Já tem conta? <Link href="/login" className="text-emerald-400 font-bold hover:underline">Faça login aqui</Link>
+            Já tem conta?{' '}
+            <Link 
+              href={role === 'producer' ? '/produtor/login' : '/login'} 
+              className="text-emerald-400 font-bold hover:underline"
+            >
+              Faça login aqui
+            </Link>
           </div>
         </div>
       </main>

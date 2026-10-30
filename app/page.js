@@ -53,7 +53,7 @@ export default function HomePage() {
           <Link href="/login" className="text-sm font-semibold text-neutral-300 hover:text-emerald-400 transition-colors px-4 py-2">
             Entrar
           </Link>
-          <Link href="/login" className="text-sm font-bold bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 px-5 py-2.5 rounded-xl transition-all shadow-md">
+          <Link href="/produtor/login" className="text-sm font-bold bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 px-5 py-2.5 rounded-xl transition-all shadow-md">
             Área do Produtor
           </Link>
         </div>
@@ -64,18 +64,15 @@ export default function HomePage() {
         
         {/* Banner Hero Redesenhado */}
         <section className="relative w-full bg-neutral-950 pt-28 pb-24 px-6 overflow-hidden">
-          {/* Efeito de Luz / Glow de Fundo */}
           <div className="absolute top-[0%] left-1/2 -translate-x-1/2 w-full max-w-2xl h-80 bg-emerald-500/20 blur-[120px] rounded-full pointer-events-none"></div>
 
           <div className="relative max-w-4xl mx-auto text-center space-y-8">
             
-            {/* Badge Flutuante */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-300 font-medium shadow-sm">
               <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
               Acesso rápido, fácil e seguro
             </div>
 
-            {/* Título com Gradiente */}
             <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.1]">
               O seu próximo <br className="hidden md:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-600">
@@ -83,7 +80,6 @@ export default function HomePage() {
               </span> começa aqui.
             </h1>
 
-            {/* Texto de Apoio */}
             <p className="text-neutral-400 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
               Encontre, garanta o seu lugar e viva experiências inesquecíveis. Os melhores eventos a um clique de distância.
             </p>
@@ -277,8 +273,8 @@ export default function HomePage() {
             <div>
               <h4 className="font-bold mb-4 text-sm uppercase tracking-wider text-neutral-300">Para Organizadores</h4>
               <ul className="space-y-3 text-sm text-neutral-500">
-                <li><Link href="/login" className="hover:text-emerald-400 transition-colors">Área do Produtor</Link></li>
-                <li><Link href="/admin/novo" className="hover:text-emerald-400 transition-colors">Criar Evento</Link></li>
+                <li><Link href="/produtor/login" className="hover:text-emerald-400 transition-colors">Área do Produtor</Link></li>
+                <li><Link href="/produtor/novo" className="hover:text-emerald-400 transition-colors">Criar Evento</Link></li>
                 <li><Link href="#" className="hover:text-emerald-400 transition-colors">Preços e Taxas</Link></li>
                 <li><Link href="#" className="hover:text-emerald-400 transition-colors">Equipamentos e Validação</Link></li>
               </ul>
